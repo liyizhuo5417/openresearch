@@ -55,6 +55,36 @@ describe("tool.scheduled-task", () => {
     })
   })
 
+  test("does not hold root settlement open for a direct scheduled task", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({ title: "detached scheduled task" })
+        const create = await ScheduledTaskCreateTool.init()
+        const created = await create.execute(
+          { dueAt: new Date(Date.now() + 60_000).toISOString(), prompt: "Analyze the latest metrics." },
+          context(session.id),
+        )
+        const node = Collab.getBySession(session.id)!
+        const abort = new AbortController()
+
+        try {
+          await Promise.race([
+            Collab.waitForRootSettled(session.id, node.id, abort.signal),
+            Bun.sleep(2000).then(() => {
+              throw new Error("direct scheduled task blocked root settlement")
+            }),
+          ])
+          expect(ScheduledTask.get(created.metadata.scheduledTaskId)?.status).toBe("pending")
+        } finally {
+          abort.abort()
+          ScheduledTask.cancel({ id: created.metadata.scheduledTaskId, agentId: node.id })
+        }
+      },
+    })
+  })
+
   test("requires a future ISO timestamp with an explicit timezone", async () => {
     const create = await ScheduledTaskCreateTool.init()
     const ctx = context("unused")

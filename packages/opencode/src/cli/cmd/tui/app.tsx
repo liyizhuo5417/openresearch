@@ -489,6 +489,21 @@ function App() {
       },
     },
     {
+      title: "Toggle Fast mode",
+      description: "Use priority processing for supported models",
+      value: "fast.toggle",
+      keybind: "fast_toggle",
+      category: "Agent",
+      enabled: local.model.fast.available(),
+      slash: {
+        name: "fast",
+      },
+      onSelect: (dialog) => {
+        local.model.fast.toggle()
+        dialog.clear()
+      },
+    },
+    {
       title: "Agent cycle reverse",
       value: "agent.cycle.reverse",
       keybind: "agent_cycle_reverse",

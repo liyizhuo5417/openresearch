@@ -251,6 +251,13 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
         local.model.variant.cycle()
       },
     }),
+    modelCommand({
+      id: "model.fast.toggle",
+      title: language.t("command.model.fast.toggle"),
+      description: language.t("command.model.fast.toggle.description"),
+      disabled: !local.model.fast.available(),
+      onSelect: () => local.model.fast.toggle(),
+    }),
   ])
 
   const isAutoAcceptActive = () => {

@@ -65,6 +65,9 @@ export const SpawnAgentTool = Tool.define("spawn_agent", async (ctx) => {
       const agent = await Agent.get(params.agent_type)
       if (!agent) throw new Error(`Unknown agent type: ${params.agent_type}`)
 
+      const parentMsg = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
+      if (parentMsg.info.role !== "assistant") throw new Error("spawn_agent called outside an assistant turn")
+
       // Make sure the current primary session is a Collab root if it is not yet.
       const parentNode = Collab.getBySession(ctx.sessionID)
       const inactive = !!parentNode?.parent_agent_id && !CollabAgentNode.isActive(parentNode.status)
@@ -78,7 +81,7 @@ export const SpawnAgentTool = Tool.define("spawn_agent", async (ctx) => {
         await Collab.ensureRootFromSession(ctx.sessionID, {
           name: "root",
           subagentType: ctx.agent,
-          spec: { initialPrompt: "" },
+          spec: { initialPrompt: "", serviceTier: parentMsg.info.serviceTier },
         })
       }
 
@@ -86,8 +89,6 @@ export const SpawnAgentTool = Tool.define("spawn_agent", async (ctx) => {
       //   1. explicit params.model from the LLM
       //   2. parent turn's model (read off the current assistant message)
       //   3. target agent's configured agent.model
-      const parentMsg = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
-      if (parentMsg.info.role !== "assistant") throw new Error("spawn_agent called outside an assistant turn")
       const inheritedModel = {
         providerID: parentMsg.info.providerID,
         modelID: parentMsg.info.modelID,

@@ -733,6 +733,7 @@ export namespace CollabLoop {
     const onAbort = () => SessionPrompt.cancel(node.session_id)
     abort.addEventListener("abort", onAbort, { once: true })
     try {
+      const root = CollabAgentNode.load(node.root_agent_id)
       const send = (messageID?: string) =>
         SessionPrompt.prompt({
           ...input.prompt,
@@ -740,6 +741,7 @@ export namespace CollabLoop {
           messageID,
           agent: input.prompt?.agent ?? node.subagent_type,
           model,
+          serviceTier: root.spec.serviceTier,
           parts: input.parts,
         })
       if (abort.aborted) throw new PromptAbort("Prompt aborted before delivery")

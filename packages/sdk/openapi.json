@@ -3264,6 +3264,13 @@
                   "variant": {
                     "type": "string"
                   },
+                  "serviceTier": {
+                    "type": "string",
+                    "enum": [
+                      "default",
+                      "priority"
+                    ]
+                  },
                   "parts": {
                     "type": "array",
                     "items": {
@@ -3759,6 +3766,13 @@
                   "variant": {
                     "type": "string"
                   },
+                  "serviceTier": {
+                    "type": "string",
+                    "enum": [
+                      "default",
+                      "priority"
+                    ]
+                  },
                   "parts": {
                     "type": "array",
                     "items": {
@@ -3898,6 +3912,13 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "serviceTier": {
+                    "type": "string",
+                    "enum": [
+                      "default",
+                      "priority"
+                    ]
                   },
                   "parts": {
                     "type": "array",
@@ -4090,7 +4111,7 @@
           }
         ],
         "summary": "Start remote experiment task",
-        "description": "Start an experiment_run remote task for the experiment linked to the session.",
+        "description": "Start an experiment_run remote task from an unattended command or multiline shell script. SSH transport, detached execution, PTY logging, and completion tracking are managed automatically.",
         "responses": {
           "200": {
             "description": "Created message",
@@ -4148,6 +4169,7 @@
                     ]
                   },
                   "command": {
+                    "description": "Unattended remote business command or multiline shell script. SSH transport, screen detachment, PTY logging, and completion tracking are managed automatically.",
                     "type": "string"
                   },
                   "title": {
@@ -4542,6 +4564,826 @@
         ]
       }
     },
+    "/research/project/{researchProjectId}/controller/session": {
+      "post": {
+        "operationId": "research.controller.session.create",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "researchProjectId",
+            "required": true
+          }
+        ],
+        "summary": "Create a Controller session",
+        "description": "Create a project-scoped human-facing Controller session and its durable Collab root.",
+        "responses": {
+          "200": {
+            "description": "Created Controller session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session_id": {
+                      "type": "string"
+                    },
+                    "agent_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "session_id",
+                    "agent_id"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.research.controller.session.create({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/research/project/{researchProjectId}/paths": {
+      "get": {
+        "operationId": "research.paths.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "researchProjectId",
+            "required": true
+          }
+        ],
+        "summary": "List Research Paths",
+        "description": "List every active, completed, and cancelled Research Path in a project.",
+        "responses": {
+          "200": {
+            "description": "Research Paths",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "research_path_id": {
+                        "type": "string"
+                      },
+                      "research_project_id": {
+                        "type": "string"
+                      },
+                      "creator_session_id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "brief": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "completed",
+                          "cancelled"
+                        ]
+                      },
+                      "time_created": {
+                        "type": "number"
+                      },
+                      "time_updated": {
+                        "type": "number"
+                      },
+                      "atoms": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "seed",
+                                "member"
+                              ]
+                            },
+                            "atom_id": {
+                              "type": "string"
+                            },
+                            "atom_name": {
+                              "type": "string"
+                            },
+                            "atom_type": {
+                              "type": "string",
+                              "enum": [
+                                "fact",
+                                "method",
+                                "theorem",
+                                "verification"
+                              ]
+                            },
+                            "atom_evidence_type": {
+                              "type": "string",
+                              "enum": [
+                                "math",
+                                "experiment"
+                              ]
+                            },
+                            "atom_evidence_status": {
+                              "type": "string",
+                              "enum": [
+                                "pending",
+                                "in_progress",
+                                "proven",
+                                "disproven"
+                              ]
+                            },
+                            "locked": {
+                              "type": "boolean"
+                            },
+                            "session_id": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "role",
+                            "atom_id",
+                            "atom_name",
+                            "atom_type",
+                            "atom_evidence_type",
+                            "atom_evidence_status",
+                            "locked",
+                            "session_id"
+                          ]
+                        }
+                      },
+                      "relations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "atom_id_source": {
+                              "type": "string"
+                            },
+                            "atom_id_target": {
+                              "type": "string"
+                            },
+                            "relation_type": {
+                              "type": "string",
+                              "enum": [
+                                "motivates",
+                                "grounds",
+                                "formalized_by",
+                                "derives",
+                                "analyzed_by",
+                                "evaluated_by",
+                                "contradicts",
+                                "other"
+                              ]
+                            },
+                            "note": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "atom_id_source",
+                            "atom_id_target",
+                            "relation_type",
+                            "note"
+                          ]
+                        }
+                      },
+                      "stages": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "index": {
+                              "type": "number"
+                            },
+                            "groups": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "atom_ids": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "cyclic": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "atom_ids",
+                                  "cyclic"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "index",
+                            "groups"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "research_path_id",
+                      "research_project_id",
+                      "creator_session_id",
+                      "title",
+                      "brief",
+                      "summary",
+                      "status",
+                      "time_created",
+                      "time_updated",
+                      "atoms",
+                      "relations",
+                      "stages"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.research.paths.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/research/project/{researchProjectId}/results": {
+      "get": {
+        "operationId": "research.results.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "researchProjectId",
+            "required": true
+          }
+        ],
+        "summary": "List accepted Research Results",
+        "description": "List every Reviewer-accepted Atom subset in a Research Project.",
+        "responses": {
+          "200": {
+            "description": "Accepted Research Results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "research_result_id": {
+                        "type": "string"
+                      },
+                      "research_project_id": {
+                        "type": "string"
+                      },
+                      "source_session_id": {
+                        "type": "string"
+                      },
+                      "reviewer_session_id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "type": "string"
+                      },
+                      "evaluation": {
+                        "type": "string"
+                      },
+                      "time_created": {
+                        "type": "number"
+                      },
+                      "time_updated": {
+                        "type": "number"
+                      },
+                      "atoms": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "atom_id": {
+                              "type": "string"
+                            },
+                            "atom_name": {
+                              "type": "string"
+                            },
+                            "available": {
+                              "type": "boolean"
+                            },
+                            "atom_type": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "fact",
+                                    "method",
+                                    "theorem",
+                                    "verification"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "atom_evidence_type": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "math",
+                                    "experiment"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "atom_evidence_status": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "pending",
+                                    "in_progress",
+                                    "proven",
+                                    "disproven"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "locked": {
+                              "anyOf": [
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "session_id": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "atom_id",
+                            "atom_name",
+                            "available",
+                            "atom_type",
+                            "atom_evidence_type",
+                            "atom_evidence_status",
+                            "locked",
+                            "session_id"
+                          ]
+                        }
+                      },
+                      "relations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "atom_id_source": {
+                              "type": "string"
+                            },
+                            "atom_id_target": {
+                              "type": "string"
+                            },
+                            "relation_type": {
+                              "type": "string",
+                              "enum": [
+                                "motivates",
+                                "grounds",
+                                "formalized_by",
+                                "derives",
+                                "analyzed_by",
+                                "evaluated_by",
+                                "contradicts",
+                                "other"
+                              ]
+                            },
+                            "note": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "atom_id_source",
+                            "atom_id_target",
+                            "relation_type",
+                            "note"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "research_result_id",
+                      "research_project_id",
+                      "source_session_id",
+                      "reviewer_session_id",
+                      "title",
+                      "summary",
+                      "evaluation",
+                      "time_created",
+                      "time_updated",
+                      "atoms",
+                      "relations"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.research.results.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/research/project/{researchProjectId}/result/{researchResultId}": {
+      "get": {
+        "operationId": "research.result.get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "researchProjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "researchResultId",
+            "required": true
+          }
+        ],
+        "summary": "Get an accepted Research Result",
+        "responses": {
+          "200": {
+            "description": "Accepted Research Result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "research_result_id": {
+                      "type": "string"
+                    },
+                    "research_project_id": {
+                      "type": "string"
+                    },
+                    "source_session_id": {
+                      "type": "string"
+                    },
+                    "reviewer_session_id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    },
+                    "evaluation": {
+                      "type": "string"
+                    },
+                    "time_created": {
+                      "type": "number"
+                    },
+                    "time_updated": {
+                      "type": "number"
+                    },
+                    "atoms": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "atom_id": {
+                            "type": "string"
+                          },
+                          "atom_name": {
+                            "type": "string"
+                          },
+                          "available": {
+                            "type": "boolean"
+                          },
+                          "atom_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fact",
+                                  "method",
+                                  "theorem",
+                                  "verification"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "atom_evidence_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "math",
+                                  "experiment"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "atom_evidence_status": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "in_progress",
+                                  "proven",
+                                  "disproven"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "locked": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "atom_id",
+                          "atom_name",
+                          "available",
+                          "atom_type",
+                          "atom_evidence_type",
+                          "atom_evidence_status",
+                          "locked",
+                          "session_id"
+                        ]
+                      }
+                    },
+                    "relations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "atom_id_source": {
+                            "type": "string"
+                          },
+                          "atom_id_target": {
+                            "type": "string"
+                          },
+                          "relation_type": {
+                            "type": "string",
+                            "enum": [
+                              "motivates",
+                              "grounds",
+                              "formalized_by",
+                              "derives",
+                              "analyzed_by",
+                              "evaluated_by",
+                              "contradicts",
+                              "other"
+                            ]
+                          },
+                          "note": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "atom_id_source",
+                          "atom_id_target",
+                          "relation_type",
+                          "note"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "research_result_id",
+                    "research_project_id",
+                    "source_session_id",
+                    "reviewer_session_id",
+                    "title",
+                    "summary",
+                    "evaluation",
+                    "time_created",
+                    "time_updated",
+                    "atoms",
+                    "relations"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.research.result.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/research/project/{researchProjectId}/atoms": {
       "get": {
         "operationId": "research.atoms.list",
@@ -4632,6 +5474,9 @@
                               }
                             ]
                           },
+                          "locked": {
+                            "type": "boolean"
+                          },
                           "article_id": {
                             "anyOf": [
                               {
@@ -4669,6 +5514,7 @@
                           "atom_evidence_status",
                           "atom_evidence_path",
                           "atom_evidence_assessment_path",
+                          "locked",
                           "article_id",
                           "session_id",
                           "time_created",
@@ -4688,7 +5534,17 @@
                             "type": "string"
                           },
                           "relation_type": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                              "motivates",
+                              "grounds",
+                              "formalized_by",
+                              "derives",
+                              "analyzed_by",
+                              "evaluated_by",
+                              "contradicts",
+                              "other"
+                            ]
                           },
                           "note": {
                             "anyOf": [
@@ -4830,6 +5686,9 @@
                         }
                       ]
                     },
+                    "locked": {
+                      "type": "boolean"
+                    },
                     "article_id": {
                       "anyOf": [
                         {
@@ -4867,6 +5726,7 @@
                     "atom_evidence_status",
                     "atom_evidence_path",
                     "atom_evidence_assessment_path",
+                    "locked",
                     "article_id",
                     "session_id",
                     "time_created",
@@ -4977,7 +5837,17 @@
                       "type": "string"
                     },
                     "relation_type": {
-                      "type": "string"
+                      "type": "string",
+                      "enum": [
+                        "motivates",
+                        "grounds",
+                        "formalized_by",
+                        "derives",
+                        "analyzed_by",
+                        "evaluated_by",
+                        "contradicts",
+                        "other"
+                      ]
                     },
                     "note": {
                       "anyOf": [
@@ -5047,12 +5917,16 @@
                     "type": "string",
                     "enum": [
                       "motivates",
-                      "formalizes",
+                      "grounds",
+                      "formalized_by",
                       "derives",
-                      "analyzes",
-                      "validates",
+                      "analyzed_by",
+                      "evaluated_by",
                       "contradicts",
-                      "other"
+                      "other",
+                      "formalizes",
+                      "analyzes",
+                      "validates"
                     ]
                   },
                   "note": {
@@ -5118,7 +5992,17 @@
                       "type": "string"
                     },
                     "relation_type": {
-                      "type": "string"
+                      "type": "string",
+                      "enum": [
+                        "motivates",
+                        "grounds",
+                        "formalized_by",
+                        "derives",
+                        "analyzed_by",
+                        "evaluated_by",
+                        "contradicts",
+                        "other"
+                      ]
                     },
                     "note": {
                       "anyOf": [
@@ -5188,24 +6072,32 @@
                     "type": "string",
                     "enum": [
                       "motivates",
-                      "formalizes",
+                      "grounds",
+                      "formalized_by",
                       "derives",
-                      "analyzes",
-                      "validates",
+                      "analyzed_by",
+                      "evaluated_by",
                       "contradicts",
-                      "other"
+                      "other",
+                      "formalizes",
+                      "analyzes",
+                      "validates"
                     ]
                   },
                   "next_relation_type": {
                     "type": "string",
                     "enum": [
                       "motivates",
-                      "formalizes",
+                      "grounds",
+                      "formalized_by",
                       "derives",
-                      "analyzes",
-                      "validates",
+                      "analyzed_by",
+                      "evaluated_by",
                       "contradicts",
-                      "other"
+                      "other",
+                      "formalizes",
+                      "analyzes",
+                      "validates"
                     ]
                   }
                 },
@@ -5272,10 +6164,11 @@
                       "type": "string",
                       "enum": [
                         "motivates",
-                        "formalizes",
+                        "grounds",
+                        "formalized_by",
                         "derives",
-                        "analyzes",
-                        "validates",
+                        "analyzed_by",
+                        "evaluated_by",
                         "contradicts",
                         "other"
                       ]
@@ -5324,12 +6217,16 @@
                     "type": "string",
                     "enum": [
                       "motivates",
-                      "formalizes",
+                      "grounds",
+                      "formalized_by",
                       "derives",
-                      "analyzes",
-                      "validates",
+                      "analyzed_by",
+                      "evaluated_by",
                       "contradicts",
-                      "other"
+                      "other",
+                      "formalizes",
+                      "analyzes",
+                      "validates"
                     ]
                   }
                 },
@@ -5411,6 +6308,16 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -5426,6 +6333,185 @@
           {
             "lang": "js",
             "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.research.atom.delete({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/research/project/{researchProjectId}/atom/{atomId}/lock": {
+      "patch": {
+        "operationId": "research.atom.lock",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "researchProjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "atomId",
+            "required": true
+          }
+        ],
+        "summary": "Lock or unlock an atom",
+        "description": "Set the human-controlled lock state for an atom.",
+        "responses": {
+          "200": {
+            "description": "Updated atom lock state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "atom_id": {
+                      "type": "string"
+                    },
+                    "research_project_id": {
+                      "type": "string"
+                    },
+                    "atom_name": {
+                      "type": "string"
+                    },
+                    "atom_type": {
+                      "type": "string"
+                    },
+                    "atom_claim_path": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "atom_evidence_type": {
+                      "type": "string"
+                    },
+                    "atom_evidence_status": {
+                      "type": "string"
+                    },
+                    "atom_evidence_path": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "atom_evidence_assessment_path": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "locked": {
+                      "type": "boolean"
+                    },
+                    "article_id": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "session_id": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "time_created": {
+                      "type": "number"
+                    },
+                    "time_updated": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "atom_id",
+                    "research_project_id",
+                    "atom_name",
+                    "atom_type",
+                    "atom_claim_path",
+                    "atom_evidence_type",
+                    "atom_evidence_status",
+                    "atom_evidence_path",
+                    "atom_evidence_assessment_path",
+                    "locked",
+                    "article_id",
+                    "session_id",
+                    "time_created",
+                    "time_updated"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locked": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "locked"
+                ]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.research.atom.lock({\n  ...\n})"
           }
         ]
       }
@@ -5522,6 +6608,9 @@
                         }
                       ]
                     },
+                    "locked": {
+                      "type": "boolean"
+                    },
                     "article_id": {
                       "anyOf": [
                         {
@@ -5559,6 +6648,7 @@
                     "atom_evidence_status",
                     "atom_evidence_path",
                     "atom_evidence_assessment_path",
+                    "locked",
                     "article_id",
                     "session_id",
                     "time_created",
@@ -6222,6 +7312,9 @@
                                 }
                               ]
                             },
+                            "locked": {
+                              "type": "boolean"
+                            },
                             "article_id": {
                               "anyOf": [
                                 {
@@ -6290,6 +7383,16 @@
                                     ]
                                   },
                                   "baseline_branch_name": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "baseline_commit_sha": {
                                     "anyOf": [
                                       {
                                         "type": "string"
@@ -6580,6 +7683,7 @@
                                   "exp_name",
                                   "exp_session_id",
                                   "baseline_branch_name",
+                                  "baseline_commit_sha",
                                   "exp_branch_name",
                                   "exp_result_path",
                                   "atom_id",
@@ -6608,6 +7712,7 @@
                             "atom_evidence_status",
                             "atom_evidence_path",
                             "atom_evidence_assessment_path",
+                            "locked",
                             "article_id",
                             "session_id",
                             "time_created",
@@ -6742,7 +7847,7 @@
           }
         ],
         "summary": "List git branches for a code path",
-        "description": "List local git branches under the given code path. If a branch is associated with an experiment, returns the experiment name as displayName.",
+        "description": "List local git branches with HEAD commit metadata. If a branch is associated with an experiment, returns the experiment name as displayName.",
         "responses": {
           "200": {
             "description": "List of branches",
@@ -6756,6 +7861,24 @@
                       "branch": {
                         "type": "string"
                       },
+                      "ref": {
+                        "type": "string"
+                      },
+                      "headSha": {
+                        "type": "string"
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "committedAt": {
+                        "type": "string"
+                      },
+                      "current": {
+                        "type": "boolean"
+                      },
+                      "default": {
+                        "type": "boolean"
+                      },
                       "displayName": {
                         "type": "string"
                       },
@@ -6768,12 +7891,40 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "experimentName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "experimentStatus": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "required": [
                       "branch",
+                      "ref",
+                      "headSha",
+                      "subject",
+                      "committedAt",
+                      "current",
+                      "default",
                       "displayName",
-                      "experimentId"
+                      "experimentId",
+                      "experimentName",
+                      "experimentStatus"
                     ]
                   }
                 }
@@ -7232,6 +8383,9 @@
                     "baseline_branch": {
                       "type": "string"
                     },
+                    "baseline_commit": {
+                      "type": "string"
+                    },
                     "exp_branch": {
                       "type": "string"
                     },
@@ -7249,6 +8403,7 @@
                     "atom_name",
                     "session_id",
                     "baseline_branch",
+                    "baseline_commit",
                     "exp_branch",
                     "exp_result_path",
                     "exp_result_summary_path"
@@ -7293,8 +8448,12 @@
                     "minLength": 1
                   },
                   "baselineBranch": {
-                    "default": "master",
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expectedHeadSha": {
+                    "type": "string",
+                    "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
                   },
                   "remoteServerId": {
                     "type": "string"
@@ -7307,6 +8466,8 @@
                 "required": [
                   "atomId",
                   "expName",
+                  "baselineBranch",
+                  "expectedHeadSha",
                   "codePath"
                 ]
               }
@@ -7619,7 +8780,7 @@
           }
         ],
         "summary": "Get experiment by session",
-        "description": "Resolve the experiment linked to a session (walks up to parent session). Returns the experiment, its linked atom, and the atom's article. Each field is independently nullable.",
+        "description": "Resolve the experiment linked to a session through session and collaboration ancestry. Returns the experiment, its linked atom, and the atom's article. Each field is independently nullable.",
         "responses": {
           "200": {
             "description": "Experiment with linked atom and article",
@@ -7667,6 +8828,16 @@
                           ]
                         },
                         "baseline_branch_name": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "baseline_commit_sha": {
                           "anyOf": [
                             {
                               "type": "string"
@@ -8001,6 +9172,9 @@
                                     }
                                   ]
                                 },
+                                "locked": {
+                                  "type": "boolean"
+                                },
                                 "article_id": {
                                   "anyOf": [
                                     {
@@ -8038,6 +9212,7 @@
                                 "atom_evidence_status",
                                 "atom_evidence_path",
                                 "atom_evidence_assessment_path",
+                                "locked",
                                 "article_id",
                                 "session_id",
                                 "time_created",
@@ -8123,6 +9298,7 @@
                         "exp_name",
                         "exp_session_id",
                         "baseline_branch_name",
+                        "baseline_commit_sha",
                         "exp_branch_name",
                         "exp_result_path",
                         "atom_id",
@@ -8206,7 +9382,7 @@
           }
         ],
         "summary": "Get experiment branch diff",
-        "description": "Compare the experiment branch against its baseline branch and return file diffs grouped by commit.",
+        "description": "Compare the experiment branch against its fixed baseline commit and return file diffs grouped by commit.",
         "responses": {
           "200": {
             "description": "Commits with file diffs",
@@ -8322,6 +9498,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "controllerSessionIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "atomSessionIds": {
                       "type": "array",
                       "items": {
@@ -8414,6 +9596,7 @@
                     }
                   },
                   "required": [
+                    "controllerSessionIds",
                     "atomSessionIds",
                     "expSessionIds",
                     "atoms"
@@ -9352,6 +10535,514 @@
         ]
       }
     },
+    "/research/server/{serverId}/mirror": {
+      "post": {
+        "operationId": "research.server.mirror",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "summary": "Mirror a remote server and its project runtime records",
+        "responses": {
+          "200": {
+            "description": "Mirrored remote server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "config": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "const": "direct"
+                            },
+                            "address": {
+                              "type": "string"
+                            },
+                            "port": {
+                              "type": "number"
+                            },
+                            "user": {
+                              "type": "string"
+                            },
+                            "password": {
+                              "type": "string"
+                            },
+                            "resource_root": {
+                              "type": "string"
+                            },
+                            "wandb_api_key": {
+                              "type": "string"
+                            },
+                            "wandb_project_name": {
+                              "type": "string"
+                            },
+                            "network": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "type": "string",
+                                      "const": "direct"
+                                    }
+                                  },
+                                  "required": [
+                                    "mode"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "type": "string",
+                                      "const": "tunnel"
+                                    },
+                                    "local_proxy": {
+                                      "type": "string"
+                                    },
+                                    "remote_port": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "no_proxy": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "local_proxy",
+                                    "remote_port"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "address",
+                            "port",
+                            "user"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "const": "ssh_config"
+                            },
+                            "host_alias": {
+                              "type": "string"
+                            },
+                            "ssh_config_path": {
+                              "type": "string"
+                            },
+                            "user": {
+                              "type": "string"
+                            },
+                            "password": {
+                              "type": "string"
+                            },
+                            "resource_root": {
+                              "type": "string"
+                            },
+                            "wandb_api_key": {
+                              "type": "string"
+                            },
+                            "wandb_project_name": {
+                              "type": "string"
+                            },
+                            "network": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "type": "string",
+                                      "const": "direct"
+                                    }
+                                  },
+                                  "required": [
+                                    "mode"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "mode": {
+                                      "type": "string",
+                                      "const": "tunnel"
+                                    },
+                                    "local_proxy": {
+                                      "type": "string"
+                                    },
+                                    "remote_port": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "no_proxy": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "mode",
+                                    "local_proxy",
+                                    "remote_port"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode",
+                            "host_alias"
+                          ]
+                        }
+                      ]
+                    },
+                    "copied": {
+                      "type": "object",
+                      "properties": {
+                        "runtimes": {
+                          "type": "number"
+                        },
+                        "environments": {
+                          "type": "number"
+                        },
+                        "resources": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "runtimes",
+                        "environments",
+                        "resources"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "config",
+                    "copied"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime records are inconsistent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "config": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "mode": {
+                            "type": "string",
+                            "const": "direct"
+                          },
+                          "address": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "user": {
+                            "type": "string"
+                          },
+                          "password": {
+                            "type": "string"
+                          },
+                          "resource_root": {
+                            "type": "string"
+                          },
+                          "wandb_api_key": {
+                            "type": "string"
+                          },
+                          "wandb_project_name": {
+                            "type": "string"
+                          },
+                          "network": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "const": "direct"
+                                  }
+                                },
+                                "required": [
+                                  "mode"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "const": "tunnel"
+                                  },
+                                  "local_proxy": {
+                                    "type": "string"
+                                  },
+                                  "remote_port": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "no_proxy": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "mode",
+                                  "local_proxy",
+                                  "remote_port"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "address",
+                          "port",
+                          "user"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "mode": {
+                            "type": "string",
+                            "const": "ssh_config"
+                          },
+                          "host_alias": {
+                            "type": "string"
+                          },
+                          "ssh_config_path": {
+                            "type": "string"
+                          },
+                          "user": {
+                            "type": "string"
+                          },
+                          "password": {
+                            "type": "string"
+                          },
+                          "resource_root": {
+                            "type": "string"
+                          },
+                          "wandb_api_key": {
+                            "type": "string"
+                          },
+                          "wandb_project_name": {
+                            "type": "string"
+                          },
+                          "network": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "const": "direct"
+                                  }
+                                },
+                                "required": [
+                                  "mode"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "const": "tunnel"
+                                  },
+                                  "local_proxy": {
+                                    "type": "string"
+                                  },
+                                  "remote_port": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "no_proxy": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "mode",
+                                  "local_proxy",
+                                  "remote_port"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "host_alias"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "user": {
+                            "type": "string"
+                          },
+                          "password": {
+                            "type": "string"
+                          },
+                          "resource_root": {
+                            "type": "string"
+                          },
+                          "wandb_api_key": {
+                            "type": "string"
+                          },
+                          "wandb_project_name": {
+                            "type": "string"
+                          },
+                          "network": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "const": "direct"
+                                  }
+                                },
+                                "required": [
+                                  "mode"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "const": "tunnel"
+                                  },
+                                  "local_proxy": {
+                                    "type": "string"
+                                  },
+                                  "remote_port": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "no_proxy": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "mode",
+                                  "local_proxy",
+                                  "remote_port"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "address",
+                          "port",
+                          "user"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "config"
+                ]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.research.server.mirror({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/research/server/{serverId}": {
       "patch": {
         "operationId": "research.server.update",
@@ -10160,6 +11851,16 @@
                                 "canceled"
                               ]
                             },
+                            "remote_server_id": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "resource_key": {
                               "anyOf": [
                                 {
@@ -10179,6 +11880,9 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "command": {
+                              "type": "string"
                             },
                             "screen_name": {
                               "type": "string"
@@ -10235,8 +11939,10 @@
                             "title",
                             "kind",
                             "status",
+                            "remote_server_id",
                             "resource_key",
                             "target_path",
+                            "command",
                             "screen_name",
                             "log_path",
                             "error_message",
@@ -10865,6 +12571,16 @@
                         }
                       ]
                     },
+                    "baseline_commit_sha": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "exp_branch_name": {
                       "anyOf": [
                         {
@@ -11146,6 +12862,7 @@
                     "exp_name",
                     "exp_session_id",
                     "baseline_branch_name",
+                    "baseline_commit_sha",
                     "exp_branch_name",
                     "exp_result_path",
                     "atom_id",
@@ -11161,6 +12878,16 @@
                     "time_created",
                     "time_updated"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
                 }
               }
             }
@@ -11187,6 +12914,10 @@
                   },
                   "baselineBranch": {
                     "type": "string"
+                  },
+                  "expectedHeadSha": {
+                    "type": "string",
+                    "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
                   },
                   "remoteServerId": {
                     "anyOf": [
@@ -11615,6 +13346,8 @@
                 "child_progress",
                 "remote_task_terminal",
                 "session_remote_task_terminal",
+                "scheduled_task_due",
+                "session_scheduled_task_due",
                 "cancel",
                 "user_input",
                 "system"
@@ -11789,6 +13522,75 @@
           {
             "lang": "js",
             "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.agent.cancel({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/agent/{agentId}/stop": {
+      "post": {
+        "operationId": "collab.agent.stop",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "agentId",
+            "required": true
+          }
+        ],
+        "summary": "Stop a Collab root",
+        "description": "Durably stop this Controller/root and its automatic descendants. Human-controlled runs and remote processes continue.",
+        "responses": {
+          "200": {
+            "description": "Controller stopped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabStopResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.agent.stop({\n  ...\n})"
           }
         ]
       }
@@ -12168,11 +13970,20 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "api": {
+                          "id": {
                             "type": "string"
                           },
                           "name": {
                             "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "env",
+                              "config",
+                              "custom",
+                              "api"
+                            ]
                           },
                           "env": {
                             "type": "array",
@@ -12180,233 +13991,21 @@
                               "type": "string"
                             }
                           },
-                          "id": {
-                            "type": "string"
-                          },
-                          "npm": {
-                            "type": "string"
-                          },
                           "models": {
                             "type": "object",
                             "propertyNames": {
                               "type": "string"
                             },
                             "additionalProperties": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string"
-                                },
-                                "name": {
-                                  "type": "string"
-                                },
-                                "family": {
-                                  "type": "string"
-                                },
-                                "release_date": {
-                                  "type": "string"
-                                },
-                                "attachment": {
-                                  "type": "boolean"
-                                },
-                                "reasoning": {
-                                  "type": "boolean"
-                                },
-                                "temperature": {
-                                  "type": "boolean"
-                                },
-                                "tool_call": {
-                                  "type": "boolean"
-                                },
-                                "interleaved": {
-                                  "anyOf": [
-                                    {
-                                      "type": "boolean",
-                                      "const": true
-                                    },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "field": {
-                                          "type": "string",
-                                          "enum": [
-                                            "reasoning_content",
-                                            "reasoning_details"
-                                          ]
-                                        }
-                                      },
-                                      "required": [
-                                        "field"
-                                      ],
-                                      "additionalProperties": false
-                                    }
-                                  ]
-                                },
-                                "cost": {
-                                  "type": "object",
-                                  "properties": {
-                                    "input": {
-                                      "type": "number"
-                                    },
-                                    "output": {
-                                      "type": "number"
-                                    },
-                                    "cache_read": {
-                                      "type": "number"
-                                    },
-                                    "cache_write": {
-                                      "type": "number"
-                                    },
-                                    "context_over_200k": {
-                                      "type": "object",
-                                      "properties": {
-                                        "input": {
-                                          "type": "number"
-                                        },
-                                        "output": {
-                                          "type": "number"
-                                        },
-                                        "cache_read": {
-                                          "type": "number"
-                                        },
-                                        "cache_write": {
-                                          "type": "number"
-                                        }
-                                      },
-                                      "required": [
-                                        "input",
-                                        "output"
-                                      ]
-                                    }
-                                  },
-                                  "required": [
-                                    "input",
-                                    "output"
-                                  ]
-                                },
-                                "limit": {
-                                  "type": "object",
-                                  "properties": {
-                                    "context": {
-                                      "type": "number"
-                                    },
-                                    "input": {
-                                      "type": "number"
-                                    },
-                                    "output": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": [
-                                    "context",
-                                    "output"
-                                  ]
-                                },
-                                "modalities": {
-                                  "type": "object",
-                                  "properties": {
-                                    "input": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "string",
-                                        "enum": [
-                                          "text",
-                                          "audio",
-                                          "image",
-                                          "video",
-                                          "pdf"
-                                        ]
-                                      }
-                                    },
-                                    "output": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "string",
-                                        "enum": [
-                                          "text",
-                                          "audio",
-                                          "image",
-                                          "video",
-                                          "pdf"
-                                        ]
-                                      }
-                                    }
-                                  },
-                                  "required": [
-                                    "input",
-                                    "output"
-                                  ]
-                                },
-                                "experimental": {
-                                  "type": "boolean"
-                                },
-                                "status": {
-                                  "type": "string",
-                                  "enum": [
-                                    "alpha",
-                                    "beta",
-                                    "deprecated"
-                                  ]
-                                },
-                                "options": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "headers": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {
-                                    "type": "string"
-                                  }
-                                },
-                                "provider": {
-                                  "type": "object",
-                                  "properties": {
-                                    "npm": {
-                                      "type": "string"
-                                    },
-                                    "api": {
-                                      "type": "string"
-                                    }
-                                  }
-                                },
-                                "variants": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {
-                                    "type": "object",
-                                    "propertyNames": {
-                                      "type": "string"
-                                    },
-                                    "additionalProperties": {}
-                                  }
-                                }
-                              },
-                              "required": [
-                                "id",
-                                "name",
-                                "release_date",
-                                "attachment",
-                                "reasoning",
-                                "temperature",
-                                "tool_call",
-                                "limit",
-                                "options"
-                              ]
+                              "$ref": "#/components/schemas/Model"
                             }
                           }
                         },
                         "required": [
-                          "name",
-                          "env",
                           "id",
+                          "name",
+                          "source",
+                          "env",
                           "models"
                         ]
                       }
@@ -15983,6 +17582,13 @@
           },
           "variant": {
             "type": "string"
+          },
+          "serviceTier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "priority"
+            ]
           }
         },
         "required": [
@@ -16323,6 +17929,13 @@
           "structured": {},
           "variant": {
             "type": "string"
+          },
+          "serviceTier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "priority"
+            ]
           },
           "finish": {
             "type": "string"
@@ -17302,6 +18915,7 @@
               "child_waiting",
               "child_progress",
               "remote_task_terminal",
+              "scheduled_task_due",
               "cancel",
               "user_input",
               "system"
@@ -17471,6 +19085,626 @@
               "sessionID",
               "messageID",
               "partID"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "CollabAgentPolicy": {
+        "type": "object",
+        "properties": {
+          "on_fail": {
+            "default": "fail_fast",
+            "type": "string",
+            "enum": [
+              "fail_fast",
+              "continue",
+              "retry_once"
+            ]
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "maxChildren": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "progress_injection": {
+            "default": "latest",
+            "type": "string",
+            "enum": [
+              "none",
+              "latest",
+              "all"
+            ]
+          },
+          "summarize": {
+            "type": "boolean"
+          },
+          "detach_on_terminal": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollabAgentSpec": {
+        "type": "object",
+        "properties": {
+          "initialPrompt": {
+            "type": "string"
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "providerID": {
+                "type": "string"
+              },
+              "modelID": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "providerID",
+              "modelID"
+            ]
+          },
+          "serviceTier": {
+            "type": "string",
+            "enum": [
+              "default",
+              "priority"
+            ]
+          },
+          "policy": {
+            "$ref": "#/components/schemas/CollabAgentPolicy"
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "initialPrompt"
+        ]
+      },
+      "CollabAgentResult": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          }
+        }
+      },
+      "CollabAgentError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "CollabAgent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "parent_agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "root_agent_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "initiator": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "human",
+                  "agent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subagent_type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "pending",
+              "running",
+              "blocked_on_children",
+              "waiting_interaction",
+              "completed",
+              "failed",
+              "canceled"
+            ]
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "main_loop",
+              "awaiting_children",
+              "draining"
+            ]
+          },
+          "spec": {
+            "$ref": "#/components/schemas/CollabAgentSpec"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollabAgentResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollabAgentError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_children": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "spawned_total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "time_created": {
+            "type": "number"
+          },
+          "time_updated": {
+            "type": "number"
+          },
+          "time_started": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "time_ended": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "parent_agent_id",
+          "name",
+          "project_id",
+          "root_agent_id",
+          "run_id",
+          "initiator",
+          "subagent_type",
+          "status",
+          "phase",
+          "spec",
+          "result",
+          "error",
+          "active_children",
+          "spawned_total",
+          "time_created",
+          "time_updated",
+          "time_started",
+          "time_ended"
+        ]
+      },
+      "Event.collab.agent.created": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.agent.created"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "info": {
+                "$ref": "#/components/schemas/CollabAgent"
+              }
+            },
+            "required": [
+              "info"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.collab.agent.status": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.agent.status"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "agentId": {
+                "type": "string"
+              },
+              "rootAgentId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "idle",
+                  "pending",
+                  "running",
+                  "blocked_on_children",
+                  "waiting_interaction",
+                  "completed",
+                  "failed",
+                  "canceled"
+                ]
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "main_loop",
+                  "awaiting_children",
+                  "draining"
+                ]
+              },
+              "active_children": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "initiator": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "human",
+                      "agent"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "agentId",
+              "rootAgentId",
+              "status",
+              "phase",
+              "active_children",
+              "initiator"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.collab.agent.reparented": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.agent.reparented"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "info": {
+                "$ref": "#/components/schemas/CollabAgent"
+              },
+              "oldParentAgentId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "newParentAgentId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "oldRootAgentId": {
+                "type": "string"
+              },
+              "newRootAgentId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "info",
+              "oldParentAgentId",
+              "newParentAgentId",
+              "oldRootAgentId",
+              "newRootAgentId"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.collab.agent.completed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.agent.completed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "agentId": {
+                "type": "string"
+              },
+              "rootAgentId": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "agentId",
+              "rootAgentId"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.collab.agent.failed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.agent.failed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "agentId": {
+                "type": "string"
+              },
+              "rootAgentId": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "agentId",
+              "rootAgentId",
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.collab.message.posted": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.message.posted"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "messageId": {
+                "type": "string"
+              },
+              "recipientAgentId": {
+                "type": "string"
+              },
+              "senderAgentId": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "child_done",
+                  "child_failed",
+                  "child_waiting",
+                  "child_progress",
+                  "remote_task_terminal",
+                  "session_remote_task_terminal",
+                  "scheduled_task_due",
+                  "session_scheduled_task_due",
+                  "cancel",
+                  "user_input",
+                  "system"
+                ]
+              }
+            },
+            "required": [
+              "messageId",
+              "recipientAgentId",
+              "senderAgentId",
+              "kind"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.collab.message.consumed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.message.consumed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "messageId": {
+                "type": "string"
+              },
+              "recipientAgentId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "child_done",
+                  "child_failed",
+                  "child_waiting",
+                  "child_progress",
+                  "remote_task_terminal",
+                  "session_remote_task_terminal",
+                  "scheduled_task_due",
+                  "session_scheduled_task_due",
+                  "cancel",
+                  "user_input",
+                  "system"
+                ]
+              }
+            },
+            "required": [
+              "messageId",
+              "recipientAgentId",
+              "kind"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.collab.root.drive_ended": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.root.drive_ended"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "rootAgentId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sessionID",
+              "rootAgentId"
             ]
           }
         },
@@ -17934,585 +20168,6 @@
           "properties"
         ]
       },
-      "CollabAgentPolicy": {
-        "type": "object",
-        "properties": {
-          "on_fail": {
-            "default": "fail_fast",
-            "type": "string",
-            "enum": [
-              "fail_fast",
-              "continue",
-              "retry_once"
-            ]
-          },
-          "timeout_ms": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-          },
-          "maxChildren": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-          },
-          "progress_injection": {
-            "default": "latest",
-            "type": "string",
-            "enum": [
-              "none",
-              "latest",
-              "all"
-            ]
-          },
-          "summarize": {
-            "type": "boolean"
-          },
-          "detach_on_terminal": {
-            "type": "boolean"
-          }
-        }
-      },
-      "CollabAgentSpec": {
-        "type": "object",
-        "properties": {
-          "initialPrompt": {
-            "type": "string"
-          },
-          "model": {
-            "type": "object",
-            "properties": {
-              "providerID": {
-                "type": "string"
-              },
-              "modelID": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "providerID",
-              "modelID"
-            ]
-          },
-          "policy": {
-            "$ref": "#/components/schemas/CollabAgentPolicy"
-          },
-          "metadata": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
-            },
-            "additionalProperties": {}
-          }
-        },
-        "required": [
-          "initialPrompt"
-        ]
-      },
-      "CollabAgentResult": {
-        "type": "object",
-        "properties": {
-          "summary": {
-            "type": "string"
-          },
-          "result": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
-            },
-            "additionalProperties": {}
-          }
-        }
-      },
-      "CollabAgentError": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "detail": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ]
-      },
-      "CollabAgent": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "session_id": {
-            "type": "string"
-          },
-          "parent_agent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "name": {
-            "type": "string"
-          },
-          "project_id": {
-            "type": "string"
-          },
-          "root_agent_id": {
-            "type": "string"
-          },
-          "run_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "subagent_type": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "idle",
-              "pending",
-              "running",
-              "blocked_on_children",
-              "waiting_interaction",
-              "completed",
-              "failed",
-              "canceled"
-            ]
-          },
-          "phase": {
-            "type": "string",
-            "enum": [
-              "main_loop",
-              "awaiting_children",
-              "draining"
-            ]
-          },
-          "spec": {
-            "$ref": "#/components/schemas/CollabAgentSpec"
-          },
-          "result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CollabAgentResult"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "error": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CollabAgentError"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "active_children": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "spawned_total": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "time_created": {
-            "type": "number"
-          },
-          "time_updated": {
-            "type": "number"
-          },
-          "time_started": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "time_ended": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "session_id",
-          "parent_agent_id",
-          "name",
-          "project_id",
-          "root_agent_id",
-          "run_id",
-          "subagent_type",
-          "status",
-          "phase",
-          "spec",
-          "result",
-          "error",
-          "active_children",
-          "spawned_total",
-          "time_created",
-          "time_updated",
-          "time_started",
-          "time_ended"
-        ]
-      },
-      "Event.collab.agent.created": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "collab.agent.created"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "info": {
-                "$ref": "#/components/schemas/CollabAgent"
-              }
-            },
-            "required": [
-              "info"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
-      "Event.collab.agent.status": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "collab.agent.status"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "agentId": {
-                "type": "string"
-              },
-              "rootAgentId": {
-                "type": "string"
-              },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "idle",
-                  "pending",
-                  "running",
-                  "blocked_on_children",
-                  "waiting_interaction",
-                  "completed",
-                  "failed",
-                  "canceled"
-                ]
-              },
-              "phase": {
-                "type": "string",
-                "enum": [
-                  "main_loop",
-                  "awaiting_children",
-                  "draining"
-                ]
-              },
-              "active_children": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              }
-            },
-            "required": [
-              "agentId",
-              "rootAgentId",
-              "status",
-              "phase",
-              "active_children"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
-      "Event.collab.agent.reparented": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "collab.agent.reparented"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "info": {
-                "$ref": "#/components/schemas/CollabAgent"
-              },
-              "oldParentAgentId": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "newParentAgentId": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "oldRootAgentId": {
-                "type": "string"
-              },
-              "newRootAgentId": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "info",
-              "oldParentAgentId",
-              "newParentAgentId",
-              "oldRootAgentId",
-              "newRootAgentId"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
-      "Event.collab.agent.completed": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "collab.agent.completed"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "agentId": {
-                "type": "string"
-              },
-              "rootAgentId": {
-                "type": "string"
-              },
-              "summary": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "agentId",
-              "rootAgentId"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
-      "Event.collab.agent.failed": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "collab.agent.failed"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "agentId": {
-                "type": "string"
-              },
-              "rootAgentId": {
-                "type": "string"
-              },
-              "code": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "agentId",
-              "rootAgentId",
-              "code",
-              "message"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
-      "Event.collab.message.posted": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "collab.message.posted"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "messageId": {
-                "type": "string"
-              },
-              "recipientAgentId": {
-                "type": "string"
-              },
-              "senderAgentId": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "child_done",
-                  "child_failed",
-                  "child_waiting",
-                  "child_progress",
-                  "remote_task_terminal",
-                  "session_remote_task_terminal",
-                  "cancel",
-                  "user_input",
-                  "system"
-                ]
-              }
-            },
-            "required": [
-              "messageId",
-              "recipientAgentId",
-              "senderAgentId",
-              "kind"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
-      "Event.collab.message.consumed": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "collab.message.consumed"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "messageId": {
-                "type": "string"
-              },
-              "recipientAgentId": {
-                "type": "string"
-              },
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "child_done",
-                  "child_failed",
-                  "child_waiting",
-                  "child_progress",
-                  "remote_task_terminal",
-                  "session_remote_task_terminal",
-                  "cancel",
-                  "user_input",
-                  "system"
-                ]
-              }
-            },
-            "required": [
-              "messageId",
-              "recipientAgentId",
-              "kind"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
-      "Event.collab.root.drive_ended": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "collab.root.drive_ended"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string"
-              },
-              "rootAgentId": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "sessionID",
-              "rootAgentId"
-            ]
-          }
-        },
-        "required": [
-          "type",
-          "properties"
-        ]
-      },
       "WorkflowStepPolicy": {
         "type": "object",
         "properties": {
@@ -18854,6 +20509,62 @@
             },
             "required": [
               "researchProjectId"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.research.paths.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "research.paths.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "researchProjectId": {
+                "type": "string"
+              },
+              "researchPathId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "researchProjectId",
+              "researchPathId"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
+      "Event.research.results.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "research.results.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "researchProjectId": {
+                "type": "string"
+              },
+              "researchResultId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "researchProjectId",
+              "researchResultId"
             ]
           }
         },
@@ -19725,6 +21436,30 @@
             "$ref": "#/components/schemas/Event.message.part.removed"
           },
           {
+            "$ref": "#/components/schemas/Event.collab.agent.created"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.agent.status"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.agent.reparented"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.agent.completed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.agent.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.message.posted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.message.consumed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.root.drive_ended"
+          },
+          {
             "$ref": "#/components/schemas/Event.permission.asked"
           },
           {
@@ -19752,30 +21487,6 @@
             "$ref": "#/components/schemas/Event.file.watcher.updated"
           },
           {
-            "$ref": "#/components/schemas/Event.collab.agent.created"
-          },
-          {
-            "$ref": "#/components/schemas/Event.collab.agent.status"
-          },
-          {
-            "$ref": "#/components/schemas/Event.collab.agent.reparented"
-          },
-          {
-            "$ref": "#/components/schemas/Event.collab.agent.completed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.collab.agent.failed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.collab.message.posted"
-          },
-          {
-            "$ref": "#/components/schemas/Event.collab.message.consumed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.collab.root.drive_ended"
-          },
-          {
             "$ref": "#/components/schemas/Event.workflow.updated"
           },
           {
@@ -19783,6 +21494,12 @@
           },
           {
             "$ref": "#/components/schemas/Event.research.atoms.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.research.paths.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.research.results.updated"
           },
           {
             "$ref": "#/components/schemas/Event.pty.created"
@@ -21150,6 +22867,9 @@
               "reasoning": {
                 "type": "boolean"
               },
+              "fast": {
+                "type": "boolean"
+              },
               "attachment": {
                 "type": "boolean"
               },
@@ -21933,6 +23653,7 @@
               "child_waiting",
               "child_progress",
               "remote_task_terminal",
+              "scheduled_task_due",
               "cancel",
               "user_input",
               "system"
@@ -22052,6 +23773,8 @@
               "child_progress",
               "remote_task_terminal",
               "session_remote_task_terminal",
+              "scheduled_task_due",
+              "session_scheduled_task_due",
               "cancel",
               "user_input",
               "system"
@@ -22146,6 +23869,21 @@
         "required": [
           "agent_id",
           "canceled"
+        ]
+      },
+      "CollabStopResponse": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "stopped": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agent_id",
+          "stopped"
         ]
       },
       "ProviderAuthMethod": {

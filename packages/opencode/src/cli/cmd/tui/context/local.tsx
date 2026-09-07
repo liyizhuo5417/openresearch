@@ -112,12 +112,14 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           modelID: string
         }[]
         variant: Record<string, string | undefined>
+        fast: boolean
       }>({
         ready: false,
         model: {},
         recent: [],
         favorite: [],
         variant: {},
+        fast: false,
       })
 
       const filePath = path.join(Global.Path.state, "model.json")
@@ -135,6 +137,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
+          fast: modelStore.fast,
         })
       }
 
@@ -143,6 +146,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (Array.isArray(x.recent)) setModelStore("recent", x.recent)
           if (Array.isArray(x.favorite)) setModelStore("favorite", x.favorite)
           if (typeof x.variant === "object" && x.variant !== null) setModelStore("variant", x.variant)
+          if (typeof x.fast === "boolean") setModelStore("fast", x.fast)
         })
         .catch(() => {})
         .finally(() => {
@@ -356,6 +360,25 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
               return
             }
             this.set(variants[index + 1])
+          },
+        },
+        fast: {
+          available() {
+            const m = currentModel()
+            if (!m) return false
+            const provider = sync.data.provider.find((x) => x.id === m.providerID)
+            return provider?.models[m.modelID]?.capabilities.fast === true
+          },
+          enabled() {
+            return modelStore.fast
+          },
+          current() {
+            if (!this.available() || !this.enabled()) return undefined
+            return "priority" as const
+          },
+          toggle() {
+            setModelStore("fast", !modelStore.fast)
+            save()
           },
         },
       }

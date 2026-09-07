@@ -2222,6 +2222,46 @@ describe("ProviderTransform.variants", () => {
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
     })
+
+    test("gpt-6-astra uses its supported efforts including 'max'", () => {
+      const model = createMockModel({
+        id: "gpt-6-astra",
+        providerID: "openai",
+        api: {
+          id: "gpt-6-astra",
+          url: "https://api.openai.com",
+          npm: "@ai-sdk/openai",
+        },
+        release_date: "2026-09-04",
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
+      expect(result.max).toEqual({
+        reasoningEffort: "max",
+        reasoningSummary: "auto",
+        include: ["reasoning.encrypted_content"],
+      })
+    })
+
+    test("gpt-5.6-sol includes 'max' effort", () => {
+      const model = createMockModel({
+        id: "gpt-5.6-sol",
+        providerID: "openai",
+        api: {
+          id: "gpt-5.6-sol",
+          url: "https://api.openai.com",
+          npm: "@ai-sdk/openai",
+        },
+        release_date: "2026-07-09",
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh", "max"])
+      expect(result.max).toEqual({
+        reasoningEffort: "max",
+        reasoningSummary: "auto",
+        include: ["reasoning.encrypted_content"],
+      })
+    })
   })
 
   describe("@ai-sdk/anthropic", () => {

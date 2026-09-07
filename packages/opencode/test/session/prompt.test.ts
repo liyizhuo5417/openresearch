@@ -214,6 +214,31 @@ describe("session.prompt agent variant", () => {
   })
 })
 
+describe("session.prompt service tier", () => {
+  test("persists service tier independently from the variant", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+        const message = await SessionPrompt.prompt({
+          sessionID: session.id,
+          model: { providerID: "opencode", modelID: "kimi-k2.5-free" },
+          variant: "high",
+          serviceTier: "priority",
+          noReply: true,
+          parts: [{ type: "text", text: "hello" }],
+        })
+
+        if (message.info.role !== "user") throw new Error("expected user message")
+        expect(message.info.variant).toBe("high")
+        expect(message.info.serviceTier).toBe("priority")
+      },
+    })
+  })
+})
+
 describe("session.prompt workflow wait_interaction", () => {
   test("keeps control inside prompt after workflow.next", async () => {
     await using tmp = await tmpdir({ git: true })

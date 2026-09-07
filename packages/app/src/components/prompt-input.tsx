@@ -35,6 +35,7 @@ import { useSessionID } from "@/context/session-id"
 import { useSync } from "@/context/sync"
 import { useComments } from "@/context/comments"
 import { Button } from "@opencode-ai/ui/button"
+import { Switch as Toggle } from "@opencode-ai/ui/switch"
 import { DockShellForm, DockTray } from "@opencode-ai/ui/dock-surface"
 import { Icon } from "@opencode-ai/ui/icon"
 import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
@@ -758,6 +759,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         providerID: currentModel.provider.id,
       },
       variant: local.model.variant.current(),
+      serviceTier: local.model.fast.available() ? (local.model.fast.enabled() ? "priority" : "default") : undefined,
       parts: [{ type: "text", text }],
     })
 
@@ -1916,6 +1918,28 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       }}
                       variant="ghost"
                     />
+                  </TooltipKeybind>
+                </Show>
+                <Show when={!props.compact && local.model.fast.available()}>
+                  <TooltipKeybind
+                    placement="top"
+                    gutter={4}
+                    title={language.t("command.model.fast.toggle")}
+                    keybind={command.keybind("model.fast.toggle")}
+                  >
+                    <Toggle
+                      class="h-7"
+                      checked={local.model.fast.enabled()}
+                      onChange={() => local.model.fast.toggle()}
+                      style={{
+                        opacity: buttonsSpring(),
+                        transform: `scale(${0.95 + buttonsSpring() * 0.05})`,
+                        filter: `blur(${(1 - buttonsSpring()) * 2}px)`,
+                        "pointer-events": buttonsSpring() > 0.5 ? "auto" : "none",
+                      }}
+                    >
+                      {language.t("prompt.model.fast")}
+                    </Toggle>
                   </TooltipKeybind>
                 </Show>
               </div>

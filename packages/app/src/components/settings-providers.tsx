@@ -69,6 +69,8 @@ export const SettingsProviders: Component = () => {
   }
 
   const canDisconnect = (item: ProviderItem) => source(item) !== "env"
+  const accounts = () => globalSync.data.provider_accounts
+  const hasAccounts = (item: ProviderItem) => item.id === "openai" && accounts().length > 0
 
   const note = (id: string) => PROVIDER_NOTES.find((item) => item.match(id))?.key
 
@@ -125,6 +127,50 @@ export const SettingsProviders: Component = () => {
       })
   }
 
+  const selectAccount = async (accountID: string) => {
+    await globalSDK.client.auth
+      .select({ providerID: "openai", accountID }, { throwOnError: true })
+      .then(async () => {
+        globalSync.set("provider_accounts", (items) =>
+          items.map((item) => ({ ...item, active: item.id === accountID })),
+        )
+        showToast({
+          variant: "success",
+          icon: "circle-check",
+          title: language.t("settings.providers.accounts.selected"),
+        })
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err)
+        showToast({ title: language.t("common.requestFailed"), description: message })
+      })
+  }
+
+  const removeAccount = async (accountID: string) => {
+    await globalSDK.client.auth
+      .removeAccount({ providerID: "openai", accountID }, { throwOnError: true })
+      .then(async () => {
+        const remaining = accounts().filter((item) => item.id !== accountID)
+        if (remaining.length === 0) await globalSDK.client.global.dispose()
+        if (remaining.length > 0) {
+          const active = remaining.find((item) => item.active) ?? remaining[0]
+          globalSync.set(
+            "provider_accounts",
+            remaining.map((item) => ({ ...item, active: item.id === active.id })),
+          )
+        }
+        showToast({
+          variant: "success",
+          icon: "circle-check",
+          title: language.t("settings.providers.accounts.removed"),
+        })
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err)
+        showToast({ title: language.t("common.requestFailed"), description: message })
+      })
+  }
+
   return (
     <div class="flex flex-col h-full overflow-y-auto no-scrollbar px-4 pb-10 sm:px-10 sm:pb-10">
       <div class="sticky top-0 z-10 bg-[linear-gradient(to_bottom,var(--surface-stronger-non-alpha)_calc(100%_-_24px),transparent)]">
@@ -147,23 +193,67 @@ export const SettingsProviders: Component = () => {
             >
               <For each={connected()}>
                 {(item) => (
-                  <div class="group flex flex-wrap items-center justify-between gap-4 min-h-16 py-3 border-b border-border-weak-base last:border-none">
-                    <div class="flex items-center gap-3 min-w-0">
-                      <ProviderIcon id={item.id} class="size-5 shrink-0 icon-strong-base" />
-                      <span class="text-14-medium text-text-strong truncate">{item.name}</span>
-                      <Tag>{type(item)}</Tag>
+                  <div class="group border-b border-border-weak-base last:border-none">
+                    <div class="flex flex-wrap items-center justify-between gap-4 min-h-16 py-3">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <ProviderIcon id={item.id} class="size-5 shrink-0 icon-strong-base" />
+                        <span class="text-14-medium text-text-strong truncate">{item.name}</span>
+                        <Tag>{type(item)}</Tag>
+                      </div>
+                      <Show
+                        when={hasAccounts(item)}
+                        fallback={
+                          <Show
+                            when={canDisconnect(item)}
+                            fallback={
+                              <span class="text-14-regular text-text-base opacity-0 group-hover:opacity-100 transition-opacity duration-200 pr-3 cursor-default">
+                                {language.t("settings.providers.connected.environmentDescription")}
+                              </span>
+                            }
+                          >
+                            <Button size="large" variant="ghost" onClick={() => void disconnect(item.id, item.name)}>
+                              {language.t("common.disconnect")}
+                            </Button>
+                          </Show>
+                        }
+                      >
+                        <Button
+                          size="large"
+                          variant="secondary"
+                          icon="plus-small"
+                          onClick={() => dialog.show(() => <DialogConnectProvider provider="openai" oauth />)}
+                        >
+                          {language.t("settings.providers.accounts.add")}
+                        </Button>
+                      </Show>
                     </div>
-                    <Show
-                      when={canDisconnect(item)}
-                      fallback={
-                        <span class="text-14-regular text-text-base opacity-0 group-hover:opacity-100 transition-opacity duration-200 pr-3 cursor-default">
-                          {language.t("settings.providers.connected.environmentDescription")}
-                        </span>
-                      }
-                    >
-                      <Button size="large" variant="ghost" onClick={() => void disconnect(item.id, item.name)}>
-                        {language.t("common.disconnect")}
-                      </Button>
+                    <Show when={hasAccounts(item)}>
+                      <div class="ml-8 border-t border-border-weak-base">
+                        <For each={accounts()}>
+                          {(account) => (
+                            <div class="flex flex-wrap items-center justify-between gap-3 min-h-12 py-2 border-b border-border-weak-base last:border-none">
+                              <div class="flex items-center gap-2 min-w-0">
+                                <span class="text-13-regular text-text-base truncate">
+                                  {account.email ?? language.t("settings.providers.accounts.emailUnavailable")}
+                                </span>
+                                <Show when={account.active}>
+                                  <Tag>{language.t("settings.providers.accounts.active")}</Tag>
+                                </Show>
+                              </div>
+                              <div class="flex items-center gap-1">
+                                <Show when={!account.active}>
+                                  <Button size="small" variant="ghost" onClick={() => void selectAccount(account.id)}>
+                                    {language.t("settings.providers.accounts.use")}
+                                  </Button>
+                                </Show>
+                                <Button size="small" variant="ghost" onClick={() => void removeAccount(account.id)}>
+                                  {language.t("common.disconnect")}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </For>
+                      </div>
                     </Show>
                   </div>
                 )}

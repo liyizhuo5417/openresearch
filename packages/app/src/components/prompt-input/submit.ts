@@ -242,6 +242,11 @@ export function createPromptSubmit(input: PromptSubmitInput) {
     }
     const agent = input.agent?.() ?? currentAgent.name
     const variant = local.model.variant.current()
+    const serviceTier = local.model.fast.available()
+      ? local.model.fast.enabled()
+        ? ("priority" as const)
+        : ("default" as const)
+      : undefined
 
     const clearInput = () => {
       prompt.reset()
@@ -307,22 +312,24 @@ export function createPromptSubmit(input: PromptSubmitInput) {
       const customCommand = sync.data.command.find((c) => c.name === commandName)
       if (customCommand) {
         clearInput()
+        const request = {
+          sessionID: session.id,
+          command: commandName,
+          arguments: args.join(" "),
+          agent,
+          model: `${model.providerID}/${model.modelID}`,
+          variant,
+          ...(serviceTier ? { serviceTier } : {}),
+          parts: images.map((attachment) => ({
+            id: Identifier.ascending("part"),
+            type: "file" as const,
+            mime: attachment.mime,
+            url: attachment.dataUrl,
+            filename: attachment.filename,
+          })),
+        }
         client.session
-          .command({
-            sessionID: session.id,
-            command: commandName,
-            arguments: args.join(" "),
-            agent,
-            model: `${model.providerID}/${model.modelID}`,
-            variant,
-            parts: images.map((attachment) => ({
-              id: Identifier.ascending("part"),
-              type: "file" as const,
-              mime: attachment.mime,
-              url: attachment.dataUrl,
-              filename: attachment.filename,
-            })),
-          })
+          .command(request)
           .catch((err) => {
             showToast({
               title: language.t("prompt.toast.commandSendFailed.title"),
@@ -356,6 +363,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
       agent,
       model,
       variant,
+      ...(serviceTier ? { serviceTier } : {}),
     }
 
     const addOptimisticMessage = () =>
@@ -435,14 +443,16 @@ export function createPromptSubmit(input: PromptSubmitInput) {
     const send = async () => {
       const ok = await waitForWorktree()
       if (!ok) return
-      await client.session.promptAsync({
+      const request = {
         sessionID: session.id,
         agent,
         model,
         messageID,
         parts: requestParts,
         variant,
-      })
+        ...(serviceTier ? { serviceTier } : {}),
+      }
+      await client.session.promptAsync(request)
     }
 
     void send().catch((err) => {

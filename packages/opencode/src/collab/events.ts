@@ -78,8 +78,8 @@ export namespace CollabEvent {
   )
 
   /**
-   * Fired each time CollabAutoWake finishes a drive cycle for a root agent
-   * and releases its inflight lock. External waiters (e.g.
+   * Fired each time CollabAutoWake finishes a collab or direct drive cycle
+   * for a root agent and releases its inflight lock. External waiters (e.g.
    * Collab.waitForRootSettled from the `task` tool) subscribe to this to
    * re-check their settled condition — the usual AgentStatus / Idle
    * triggers all fire WHILE inflight is still held, so they get filtered

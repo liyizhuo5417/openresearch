@@ -1,10 +1,11 @@
 import { marked } from "marked"
 import markedKatex from "marked-katex-extension"
 import markedShiki from "marked-shiki"
-import katex from "katex"
 import { bundledLanguages, type BundledLanguage } from "shiki"
-import { createSimpleContext } from "./helper"
 import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
+
+import { createSimpleContext } from "./helper"
+import { preprocess } from "./markdown-math"
 
 registerCustomTheme("OpenCode", () => {
   return Promise.resolve({
@@ -376,60 +377,6 @@ registerCustomTheme("OpenCode", () => {
   } as unknown as ThemeRegistrationResolved)
 })
 
-function preProcessMath(markdown: string): { text: string; mathBlocks: Map<string, string> } {
-  const mathBlocks = new Map<string, string>()
-  let counter = 0
-
-  const patterns = [
-    { regex: /\\\\\(\s*([\s\S]*?)\s*\\\\\)/g, display: false },
-    { regex: /\\\\\[\s*([\s\S]*?)\s*\\\\\]/g, display: true },
-    { regex: /\\\(\s*([\s\S]*?)\s*\\\)/g, display: false },
-    { regex: /\\\[\s*([\s\S]*?)\s*\\\]/g, display: true },
-    { regex: /\$\$([\s\S]*?)\$\$/g, display: true },
-    { regex: /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)\$(?!\$)/g, display: false },
-  ]
-
-  let result = markdown
-
-  for (const { regex, display } of patterns) {
-    result = result.replace(regex, (_, math) => {
-      const key = `MATHPLACEHOLDER${counter++}END`
-      const source = normalizeMath(math)
-      try {
-        const rendered = katex.renderToString(source, { displayMode: display, throwOnError: false })
-        mathBlocks.set(key, rendered)
-      } catch {
-        mathBlocks.set(key, display ? `$$${source}$$` : `$${source}$`)
-      }
-      return key
-    })
-  }
-
-  return { text: result, mathBlocks }
-}
-
-function normalizeMath(math: string): string {
-  const names = [
-    "sqrt",
-    "widetilde",
-    "widehat",
-    "nabla",
-    "theta",
-    "eta",
-    "xi",
-    "pi",
-    "log",
-    "mid",
-    "le",
-    "leq",
-    "operatorname",
-    "mathrm",
-    "langle",
-    "rangle",
-  ]
-  return math.replace(new RegExp(`(^|[^\\\\A-Za-z])(${names.join("|")})(?=[^A-Za-z]|$)`, "g"), "$1\\$2")
-}
-
 function postProcessMath(html: string, mathBlocks: Map<string, string>): string {
   let result = html
   for (const [key, value] of mathBlocks) {
@@ -518,7 +465,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
 
     const wrappedParser = {
       async parse(markdown: string): Promise<string> {
-        const { text: processedMarkdown, mathBlocks } = preProcessMath(markdown)
+        const { text: processedMarkdown, mathBlocks } = preprocess(markdown)
         const html = await jsParser.parse(processedMarkdown)
         const withMath = postProcessMath(html, mathBlocks)
         return highlightCodeBlocks(withMath)
@@ -529,7 +476,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
       const nativeParser = props.nativeParser
       return {
         async parse(markdown: string): Promise<string> {
-          const { text: processedMarkdown, mathBlocks } = preProcessMath(markdown)
+          const { text: processedMarkdown, mathBlocks } = preprocess(markdown)
           const html = await nativeParser(processedMarkdown)
           const withMath = postProcessMath(html, mathBlocks)
           return highlightCodeBlocks(withMath)

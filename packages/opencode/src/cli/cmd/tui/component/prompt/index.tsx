@@ -570,6 +570,9 @@ export function Prompt(props: PromptProps) {
     // Capture mode before it gets reset
     const currentMode = store.mode
     const variant = local.model.variant.current()
+    const serviceTier: "default" | "priority" | undefined = local.model.fast.available()
+      ? (local.model.fast.current() ?? "default")
+      : undefined
 
     if (store.mode === "shell") {
       sdk.client.session.shell({
@@ -597,7 +600,7 @@ export function Prompt(props: PromptProps) {
       const restOfInput = firstLineEnd === -1 ? "" : inputText.slice(firstLineEnd + 1)
       const args = firstLineArgs.join(" ") + (restOfInput ? "\n" + restOfInput : "")
 
-      sdk.client.session.command({
+      const request = {
         sessionID,
         command: command.slice(1),
         arguments: args,
@@ -605,35 +608,37 @@ export function Prompt(props: PromptProps) {
         model: `${selectedModel.providerID}/${selectedModel.modelID}`,
         messageID,
         variant,
+        ...(serviceTier ? { serviceTier } : {}),
         parts: nonTextParts
           .filter((x) => x.type === "file")
           .map((x) => ({
             id: Identifier.ascending("part"),
             ...x,
           })),
-      })
+      }
+      sdk.client.session.command(request)
     } else {
-      sdk.client.session
-        .prompt({
-          sessionID,
-          ...selectedModel,
-          messageID,
-          agent: local.agent.current().name,
-          model: selectedModel,
-          variant,
-          parts: [
-            {
-              id: Identifier.ascending("part"),
-              type: "text",
-              text: inputText,
-            },
-            ...nonTextParts.map((x) => ({
-              id: Identifier.ascending("part"),
-              ...x,
-            })),
-          ],
-        })
-        .catch(() => {})
+      const request = {
+        sessionID,
+        ...selectedModel,
+        messageID,
+        agent: local.agent.current().name,
+        model: selectedModel,
+        variant,
+        ...(serviceTier ? { serviceTier } : {}),
+        parts: [
+          {
+            id: Identifier.ascending("part"),
+            type: "text" as const,
+            text: inputText,
+          },
+          ...nonTextParts.map((x) => ({
+            id: Identifier.ascending("part"),
+            ...x,
+          })),
+        ],
+      }
+      sdk.client.session.prompt(request).catch(() => {})
     }
     history.append({
       ...store.prompt,
@@ -1011,6 +1016,10 @@ export function Prompt(props: PromptProps) {
                     <text>
                       <span style={{ fg: theme.warning, bold: true }}>{local.model.variant.current()}</span>
                     </text>
+                  </Show>
+                  <Show when={local.model.fast.current()}>
+                    <text fg={theme.textMuted}>·</text>
+                    <text fg={theme.warning}>fast</text>
                   </Show>
                 </box>
               </Show>

@@ -14,6 +14,7 @@ type Store = {
   user: User[]
   recent: ModelKey[]
   variant?: Record<string, string | undefined>
+  fast: boolean
 }
 
 const RECENT_LIMIT = 5
@@ -33,6 +34,7 @@ export const { use: useModels, provider: ModelsProvider } = createSimpleContext(
         user: [],
         recent: [],
         variant: {},
+        fast: false,
       }),
     )
 
@@ -157,6 +159,10 @@ export const { use: useModels, provider: ModelsProvider } = createSimpleContext(
       variant: {
         get: getVariant,
         set: setVariant,
+      },
+      fast: {
+        get: () => store.fast,
+        set: (value: boolean) => setStore("fast", value),
       },
     }
   },

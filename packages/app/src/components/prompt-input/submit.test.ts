@@ -11,16 +11,23 @@ const optimistic: Array<{
     agent: string
     model: { providerID: string; modelID: string }
     variant?: string
+    serviceTier?: "default" | "priority"
   }
 }> = []
 const sentShell: string[] = []
+const sentPrompts: Array<{ serviceTier?: "default" | "priority" }> = []
+const sentCommands: Array<{ serviceTier?: "default" | "priority" }> = []
 const syncedDirectories: string[] = []
 
 let params: { id?: string } = {}
 let selected = "/repo/worktree-a"
 let variant: string | undefined
+let fast = false
+let eligible = false
+let commands: Array<{ name: string }> = []
+let text = "ls"
 
-const promptValue: Prompt = [{ type: "text", content: "ls", start: 0, end: 2 }]
+const promptValue = (): Prompt => [{ type: "text", content: text, start: 0, end: text.length }]
 
 const clientFor = (directory: string) => {
   createdClients.push(directory)
@@ -35,8 +42,14 @@ const clientFor = (directory: string) => {
         return { data: undefined }
       },
       prompt: async () => ({ data: undefined }),
-      promptAsync: async () => ({ data: undefined }),
-      command: async () => ({ data: undefined }),
+      promptAsync: async (input: { serviceTier?: "default" | "priority" }) => {
+        sentPrompts.push(input)
+        return { data: undefined }
+      },
+      command: async (input: { serviceTier?: "default" | "priority" }) => {
+        sentCommands.push(input)
+        return { data: undefined }
+      },
       abort: async () => ({ data: undefined }),
     },
     worktree: {
@@ -71,8 +84,12 @@ beforeAll(async () => {
   mock.module("@/context/local", () => ({
     useLocal: () => ({
       model: {
-        current: () => ({ id: "model", provider: { id: "provider" } }),
+        current: () => ({ id: "model", provider: { id: "provider" }, capabilities: { fast: eligible } }),
         variant: { current: () => variant },
+        fast: {
+          available: () => eligible,
+          enabled: () => fast,
+        },
       },
       agent: {
         current: () => ({ name: "agent" }),
@@ -90,7 +107,7 @@ beforeAll(async () => {
 
   mock.module("@/context/prompt", () => ({
     usePrompt: () => ({
-      current: () => promptValue,
+      current: () => promptValue(),
       reset: () => undefined,
       set: () => undefined,
       context: {
@@ -125,11 +142,16 @@ beforeAll(async () => {
 
   mock.module("@/context/sync", () => ({
     useSync: () => ({
-      data: { command: [] },
+      data: { command: commands },
       session: {
         optimistic: {
           add: (value: {
-            message: { agent: string; model: { providerID: string; modelID: string }; variant?: string }
+            message: {
+              agent: string
+              model: { providerID: string; modelID: string }
+              variant?: string
+              serviceTier?: "default" | "priority"
+            }
           }) => {
             optimistic.push(value)
           },
@@ -172,10 +194,33 @@ beforeEach(() => {
   optimistic.length = 0
   params = {}
   sentShell.length = 0
+  sentPrompts.length = 0
+  sentCommands.length = 0
   syncedDirectories.length = 0
   selected = "/repo/worktree-a"
   variant = undefined
+  fast = false
+  eligible = false
+  commands = []
+  text = "ls"
 })
+
+const normal = () =>
+  createPromptSubmit({
+    info: () => ({ id: "session-1" }),
+    imageAttachments: () => [],
+    commentCount: () => 0,
+    autoAccept: () => false,
+    mode: () => "normal",
+    working: () => false,
+    editor: () => undefined,
+    queueScroll: () => undefined,
+    promptLength: (value) => value.reduce((sum, part) => sum + ("content" in part ? part.content.length : 0), 0),
+    addToHistory: () => undefined,
+    resetHistoryNavigation: () => undefined,
+    setMode: () => undefined,
+    setPopover: () => undefined,
+  })
 
 describe("prompt submit worktree selection", () => {
   test("reads the latest worktree accessor value per submit", async () => {
@@ -295,5 +340,54 @@ describe("prompt submit worktree selection", () => {
     await submit.handleSubmit({ preventDefault: () => undefined } as unknown as Event)
 
     expect(optimistic[0]?.message.agent).toBe("controller")
+  })
+})
+
+describe("prompt submit Fast mode", () => {
+  test("sends priority for eligible models when Fast mode is enabled", async () => {
+    params = { id: "session-1" }
+    eligible = true
+    fast = true
+
+    await normal().handleSubmit({ preventDefault: () => undefined } as unknown as Event)
+    await Promise.resolve()
+
+    expect(sentPrompts[0]?.serviceTier).toBe("priority")
+    expect(optimistic[0]?.message.serviceTier).toBe("priority")
+  })
+
+  test("sends default for eligible models when Fast mode is disabled", async () => {
+    params = { id: "session-1" }
+    eligible = true
+
+    await normal().handleSubmit({ preventDefault: () => undefined } as unknown as Event)
+    await Promise.resolve()
+
+    expect(sentPrompts[0]?.serviceTier).toBe("default")
+    expect(optimistic[0]?.message.serviceTier).toBe("default")
+  })
+
+  test("omits service tier for unsupported models while preserving the preference", async () => {
+    params = { id: "session-1" }
+    fast = true
+
+    await normal().handleSubmit({ preventDefault: () => undefined } as unknown as Event)
+    await Promise.resolve()
+
+    expect(fast).toBe(true)
+    expect(sentPrompts[0]).not.toHaveProperty("serviceTier")
+    expect(optimistic[0]?.message).not.toHaveProperty("serviceTier")
+  })
+
+  test("includes service tier in custom command requests", async () => {
+    params = { id: "session-1" }
+    eligible = true
+    fast = true
+    commands = [{ name: "review" }]
+    text = "/review changes"
+
+    await normal().handleSubmit({ preventDefault: () => undefined } as unknown as Event)
+
+    expect(sentCommands[0]?.serviceTier).toBe("priority")
   })
 })

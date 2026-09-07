@@ -40,6 +40,7 @@ export type CollabMsgStatus = (typeof collabMsgStatuses)[number]
 type AgentSpecData = {
   initialPrompt: string
   model?: { providerID: string; modelID: string }
+  serviceTier?: "default" | "priority"
   policy?: {
     on_fail?: "fail_fast" | "continue" | "retry_once"
     timeout_ms?: number

@@ -125,6 +125,7 @@ function AutoMethod(props: AutoMethodProps) {
     const result = await sdk.client.provider.oauth.callback({
       providerID: props.providerID,
       method: props.index,
+      flow: props.authorization.flow,
     })
     if (result.error) {
       dialog.clear()
@@ -179,6 +180,7 @@ function CodeMethod(props: CodeMethodProps) {
           providerID: props.providerID,
           method: props.index,
           code: value,
+          flow: props.authorization.flow,
         })
         if (!error) {
           await sdk.client.instance.dispose()

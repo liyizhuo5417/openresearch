@@ -568,10 +568,12 @@ export const SessionRoutes = lazy(() =>
           await SessionRevert.cleanup(session)
           const msgs = await Session.messages({ sessionID })
           let currentAgent = await Agent.defaultAgent()
+          let current: MessageV2.User | undefined
           for (let i = msgs.length - 1; i >= 0; i--) {
             const info = msgs[i].info
             if (info.role === "user") {
               currentAgent = info.agent || (await Agent.defaultAgent())
+              current = info
               break
             }
           }
@@ -582,6 +584,8 @@ export const SessionRoutes = lazy(() =>
               providerID: body.providerID,
               modelID: body.modelID,
             },
+            variant: current?.variant,
+            serviceTier: current?.serviceTier,
             auto: body.auto,
           })
           await SessionPrompt.loop({ sessionID })

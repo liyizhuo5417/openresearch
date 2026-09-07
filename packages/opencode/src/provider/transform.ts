@@ -547,6 +547,8 @@ export namespace ProviderTransform {
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/openai
         if (id === "gpt-5-pro") return {}
         const openaiEfforts = iife(() => {
+          if (id === "gpt-6-astra") return [...WIDELY_SUPPORTED_EFFORTS, "xhigh", "max"]
+          if (id === "gpt-5.6-sol") return ["none", ...WIDELY_SUPPORTED_EFFORTS, "xhigh", "max"]
           if (id.includes("codex")) {
             if (id.includes("5.2") || id.includes("5.3")) return [...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
             return WIDELY_SUPPORTED_EFFORTS

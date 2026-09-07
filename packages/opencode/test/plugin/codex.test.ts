@@ -5,7 +5,9 @@ import {
   parseJwtClaims,
   extractAccountIdFromClaims,
   extractAccountId,
+  extractEmail,
   allowed,
+  fast,
   type IdTokenClaims,
 } from "../../src/plugin/codex"
 
@@ -33,12 +35,32 @@ describe("plugin.codex", () => {
       "gpt-5.6-luna",
       "gpt-5.10",
       "gpt-6.0",
+      "gpt-6-astra",
     ])("allows %s", (id) => {
       expect(allowed(id)).toBe(true)
     })
 
     test.each(["gpt-5.5-pro", "gpt-5.4-mini", "gpt-4.1"])("rejects %s", (id) => {
       expect(allowed(id)).toBe(false)
+    })
+  })
+
+  describe("fast", () => {
+    test.each([
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "gpt-5.5",
+      "gpt-5.6",
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-6-astra",
+    ])("supports %s", (id) => {
+      expect(fast(id)).toBe(true)
+    })
+
+    test.each(["gpt-5.3-codex", "gpt-5.6-nano", "gpt-5.6-sol-preview", "gpt-6.0"])("rejects %s", (id) => {
+      expect(fast(id)).toBe(false)
     })
   })
 
@@ -147,6 +169,28 @@ describe("plugin.codex", () => {
           refresh_token: "rt",
         }),
       ).toBe("acc-123")
+    })
+  })
+
+  describe("extractEmail", () => {
+    test("extracts email from id_token first", () => {
+      expect(
+        extractEmail({
+          id_token: createTestJwt({ email: "id@example.com" }),
+          access_token: createTestJwt({ email: "access@example.com" }),
+          refresh_token: "rt",
+        }),
+      ).toBe("id@example.com")
+    })
+
+    test("falls back to the access token", () => {
+      expect(
+        extractEmail({
+          id_token: createTestJwt({}),
+          access_token: createTestJwt({ email: "access@example.com" }),
+          refresh_token: "rt",
+        }),
+      ).toBe("access@example.com")
     })
   })
 })

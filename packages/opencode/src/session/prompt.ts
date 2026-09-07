@@ -129,6 +129,7 @@ export namespace SessionPrompt {
     format: MessageV2.Format.optional(),
     system: z.string().optional(),
     variant: z.string().optional(),
+    serviceTier: z.enum(["default", "priority"]).optional(),
     parts: z.array(
       z.discriminatedUnion("type", [
         MessageV2.TextPart.omit({
@@ -208,6 +209,8 @@ export namespace SessionPrompt {
         agent: agent.name,
         modelID: model.modelID,
         providerID: model.providerID,
+        variant: userMessage.info.variant,
+        serviceTier: userMessage.info.serviceTier,
         path: {
           cwd: Instance.directory,
           root: Instance.worktree,
@@ -235,6 +238,7 @@ export namespace SessionPrompt {
 
     const message = await createUserMessage(input)
     Collab.model(input.sessionID, message.info.model)
+    if (message.info.serviceTier) Collab.serviceTier(input.sessionID, message.info.serviceTier)
     const text = input.parts
       .filter((part) => part.type === "text")
       .map((part) => part.text)
@@ -466,6 +470,7 @@ export namespace SessionPrompt {
           mode: task.agent,
           agent: task.agent,
           variant: lastUser.variant,
+          serviceTier: lastUser.serviceTier,
           path: {
             cwd: Instance.directory,
             root: Instance.worktree,
@@ -617,6 +622,8 @@ export namespace SessionPrompt {
             },
             agent: lastUser.agent,
             model: lastUser.model,
+            variant: lastUser.variant,
+            serviceTier: lastUser.serviceTier,
           }
           await Session.updateMessage(summaryUserMsg)
           await Session.updatePart({
@@ -666,6 +673,8 @@ export namespace SessionPrompt {
           sessionID,
           agent: lastUser.agent,
           model: lastUser.model,
+          variant: lastUser.variant,
+          serviceTier: lastUser.serviceTier,
           auto: true,
           origin: lastUser.id,
         })
@@ -693,6 +702,7 @@ export namespace SessionPrompt {
           mode: agent.name,
           agent: agent.name,
           variant: lastUser.variant,
+          serviceTier: lastUser.serviceTier,
           path: {
             cwd: Instance.directory,
             root: Instance.worktree,
@@ -876,6 +886,8 @@ export namespace SessionPrompt {
             sessionID,
             agent: lastUser.agent,
             model: lastUser.model,
+            variant: lastUser.variant,
+            serviceTier: lastUser.serviceTier,
             auto: true,
             overflow: !processor.message.finish,
             origin: lastUser.id,
@@ -902,6 +914,8 @@ export namespace SessionPrompt {
           sessionID,
           agent: lastUser.agent,
           model: lastUser.model,
+          variant: lastUser.variant,
+          serviceTier: lastUser.serviceTier,
           auto: true,
           overflow: !processor.message.finish,
           origin: lastUser.id,
@@ -1259,6 +1273,7 @@ export namespace SessionPrompt {
       system: input.system,
       format: input.format,
       variant,
+      serviceTier: input.serviceTier,
     }
     using _ = defer(() => InstructionPrompt.clear(info.id))
 
@@ -1585,6 +1600,7 @@ export namespace SessionPrompt {
         model: input.model,
         messageID: input.messageID,
         variant: input.variant,
+        serviceTier: input.serviceTier,
       },
       {
         message: info,
@@ -2315,6 +2331,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     arguments: z.string(),
     command: z.string(),
     variant: z.string().optional(),
+    serviceTier: z.enum(["default", "priority"]).optional(),
     parts: z
       .array(
         z.discriminatedUnion("type", [
@@ -2472,6 +2489,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       agent: userAgent,
       parts,
       variant: input.variant,
+      serviceTier: input.serviceTier,
     })) as MessageV2.WithParts
 
     Bus.publish(Command.Event.Executed, {

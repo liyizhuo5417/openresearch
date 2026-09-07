@@ -447,6 +447,14 @@ export namespace Collab {
     return CollabAgentNode.spec(node.id, { ...node.spec, model })
   }
 
+  export function serviceTier(sessionId: string, serviceTier: "default" | "priority") {
+    const node = getBySession(sessionId)
+    if (!node) return
+    const root = CollabAgentNode.load(node.root_agent_id)
+    if (root.spec.serviceTier === serviceTier) return root
+    return CollabAgentNode.spec(root.id, { ...root.spec, serviceTier })
+  }
+
   export function hasOutstandingAsyncWork(sessionId: string): boolean {
     const state = workflowAsyncState(sessionId)
     return (
@@ -567,9 +575,12 @@ export namespace Collab {
       if (!node) return true
       if (!CollabAgentNode.isActive(node.status)) return true
       if (node.active_children > 0) return false
-      if (ExperimentRemoteTaskListener.has(rootAgentId, "collab")) return false
+      // Task-created roots have no run_id, so terminal listeners and their
+      // callback messages use direct routing. Scheduled direct work stays detached.
+      if (ExperimentRemoteTaskListener.has(rootAgentId)) return false
       if (ScheduledTask.has(rootAgentId, "collab")) return false
       if (CollabMessage.hasOutstandingWakeMsg(rootAgentId)) return false
+      if (CollabMessage.hasOutstanding(rootAgentId, "session_remote_task_terminal")) return false
       if (SessionStatus.get(sessionId).type !== "idle") return false
       // AutoWake's maybeWakeOrBlock claims the inflight lock before it
       // drain+transitions+awaits SessionPrompt. Between drain and the
@@ -614,14 +625,20 @@ export namespace Collab {
         if (isSettled()) finish()
       })
 
+      let aborting = false
       const onAbort = abort
         ? () => {
+            if (aborting) return
+            aborting = true
             void cancel(rootAgentId, "task aborted")
               .catch(() => {})
               .finally(finish)
           }
         : undefined
-      if (abort && onAbort) abort.addEventListener("abort", onAbort)
+      if (abort && onAbort) {
+        abort.addEventListener("abort", onAbort)
+        if (abort.aborted) onAbort()
+      }
 
       // Close the race window between the initial isSettled() and subscribe
       // activation — an Idle / AgentStatus event could have fired between

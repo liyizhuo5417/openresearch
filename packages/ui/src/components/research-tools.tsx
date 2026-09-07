@@ -888,7 +888,11 @@ export function ResearchToolError(props: { tool: string; error: string }) {
         defaultOpen={false}
         trigger={{
           title: spec() ? i18n.t(spec()!.title) : props.tool,
-          args: [i18n.t("ui.tool.research.failed")],
+          args: [
+            props.tool === "experiment_remote_task_get" && props.error.startsWith("remote task wait timed out:")
+              ? "timeout"
+              : i18n.t("ui.tool.research.failed"),
+          ],
         }}
       >
         <div data-component="research-tool-details">

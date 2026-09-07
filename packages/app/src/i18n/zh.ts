@@ -95,11 +95,14 @@ export const dict = {
 
   "command.model.variant.cycle": "切换思考强度",
   "command.model.variant.cycle.description": "切换到下一个强度等级",
+  "command.model.fast.toggle": "切换 Fast 模式",
+  "command.model.fast.toggle.description": "为支持的模型使用优先处理",
 
   "command.prompt.mode.shell": "Shell",
   "command.prompt.mode.ssh": "SSH",
   "command.prompt.mode.remoteTask": "Remote Task",
   "command.prompt.mode.normal": "Prompt",
+  "prompt.model.fast": "Fast",
 
   "command.permissions.autoaccept.enable": "自动接受权限",
   "command.permissions.autoaccept.disable": "停止自动接受权限",

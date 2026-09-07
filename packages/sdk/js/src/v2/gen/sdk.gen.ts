@@ -9,8 +9,14 @@ import type {
   AppLogResponses,
   AppSkillsResponses,
   Auth as Auth3,
+  AuthAccountsErrors,
+  AuthAccountsResponses,
+  AuthRemoveAccountErrors,
+  AuthRemoveAccountResponses,
   AuthRemoveErrors,
   AuthRemoveResponses,
+  AuthSelectErrors,
+  AuthSelectResponses,
   AuthSetErrors,
   AuthSetResponses,
   CollabActiveListResponses,
@@ -440,6 +446,85 @@ export class Global extends HeyApiClient {
 }
 
 export class Auth extends HeyApiClient {
+  /**
+   * List auth accounts
+   *
+   * List authentication account metadata for a provider
+   */
+  public accounts<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "providerID" }] }])
+    return (options?.client ?? this.client).get<AuthAccountsResponses, AuthAccountsErrors, ThrowOnError>({
+      url: "/auth/{providerID}/accounts",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Remove auth account
+   *
+   * Remove one authentication account for a provider
+   */
+  public removeAccount<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: string
+      accountID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "accountID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<AuthRemoveAccountResponses, AuthRemoveAccountErrors, ThrowOnError>({
+      url: "/auth/{providerID}/accounts/{accountID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Select auth account
+   *
+   * Select the active authentication account for a provider
+   */
+  public select<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: string
+      accountID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "accountID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<AuthSelectResponses, AuthSelectErrors, ThrowOnError>({
+      url: "/auth/{providerID}/accounts/{accountID}",
+      ...options,
+      ...params,
+    })
+  }
+
   /**
    * Remove auth credentials
    *
@@ -2072,6 +2157,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      serviceTier?: "default" | "priority"
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput | CollabReturnPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -2092,6 +2178,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "serviceTier" },
             { in: "body", key: "parts" },
           ],
         },
@@ -2204,6 +2291,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      serviceTier?: "default" | "priority"
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput | CollabReturnPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -2224,6 +2312,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "serviceTier" },
             { in: "body", key: "parts" },
           ],
         },
@@ -2257,6 +2346,7 @@ export class Session2 extends HeyApiClient {
       arguments?: string
       command?: string
       variant?: string
+      serviceTier?: "default" | "priority"
       parts?: Array<{
         id?: string
         type: "file"
@@ -2282,6 +2372,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
             { in: "body", key: "variant" },
+            { in: "body", key: "serviceTier" },
             { in: "body", key: "parts" },
           ],
         },
@@ -5311,6 +5402,7 @@ export class Oauth extends HeyApiClient {
       workspace?: string
       method?: number
       code?: string
+      flow?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5324,6 +5416,7 @@ export class Oauth extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "method" },
             { in: "body", key: "code" },
+            { in: "body", key: "flow" },
           ],
         },
       ],

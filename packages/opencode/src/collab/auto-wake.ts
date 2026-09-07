@@ -282,6 +282,12 @@ export namespace CollabAutoWake {
       ) {
         CollabRuntime.schedule(node.id, 1000, () => void tryDriveById(node.id, inflight))
       }
+      if (!node.parent_agent_id && node.root_agent_id === node.id) {
+        Bus.publish(CollabEvent.RootDriveEnded, {
+          sessionID: node.session_id,
+          rootAgentId: node.id,
+        })
+      }
     }
   }
 
@@ -307,6 +313,7 @@ export namespace CollabAutoWake {
       const drafts = finalizeParts(parts)
       const delivery = (msgs[0].payload_json as { deliveryMessageId?: unknown }).deliveryMessageId
       const messageID = typeof delivery === "string" ? delivery : undefined
+      const root = CollabAgentNode.load(node.root_agent_id)
       if (abort.aborted) throw new Error("Session ownership lost during direct delivery")
       const turn = await CollabDelivery.deliver({
         node,
@@ -319,6 +326,7 @@ export namespace CollabAutoWake {
             messageID: id,
             agent: node.subagent_type,
             model: node.spec.model,
+            serviceTier: root.spec.serviceTier,
             parts: drafts,
           }),
       })
@@ -626,6 +634,7 @@ export namespace CollabAutoWake {
         CollabMessage.retry(msgs, false)
         return false
       }
+      const root = CollabAgentNode.load(node.root_agent_id)
       const turn = await CollabDelivery.deliver({
         node,
         msgs,
@@ -637,6 +646,7 @@ export namespace CollabAutoWake {
             messageID: id,
             agent: node.subagent_type,
             model: node.spec.model,
+            serviceTier: root.spec.serviceTier,
             parts,
           }),
       })

@@ -168,6 +168,14 @@ Varies by model but roughly:
 This list is not comprehensive. Many other providers have built-in defaults too.
 :::
 
+### OpenAI Fast mode
+
+When you connect OpenAI with ChatGPT OAuth, supported GPT-5.6 models expose a separate **Fast** control. Fast mode uses priority processing and can be combined with any reasoning variant, such as `high` or `xhigh`.
+
+Use the **Fast** button next to the variant selector in the app, or run `/fast` in the TUI. The selection is remembered when you switch models, but only applies to models that advertise Fast mode.
+
+Fast mode consumes ChatGPT credits at a higher rate. API key connections do not show this control; API users can opt into separately billed Priority Processing with the model option `"serviceTier": "priority"`.
+
 ### Custom variants
 
 You can override existing variants or add your own:
@@ -184,7 +192,7 @@ You can override existing variants or add your own:
               "reasoningEffort": "high",
               "textVerbosity": "low",
             },
-            "fast": {
+            "xhigh": {
               "disabled": true,
             },
           },

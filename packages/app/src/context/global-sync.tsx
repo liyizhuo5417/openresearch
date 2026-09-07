@@ -1,4 +1,5 @@
 import type {
+  AuthAccount,
   Config,
   OpencodeClient,
   Path,
@@ -51,6 +52,7 @@ type GlobalStore = {
   }
   provider: ProviderListResponse
   provider_auth: ProviderAuthResponse
+  provider_accounts: AuthAccount[]
   config: Config
   reload: undefined | "pending" | "complete"
 }
@@ -80,6 +82,7 @@ function createGlobalSync() {
     session_workflow: {},
     provider: { all: [], connected: [], default: {} },
     provider_auth: {},
+    provider_accounts: [],
     config: {},
     reload: undefined,
   })

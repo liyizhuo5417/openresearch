@@ -203,6 +203,98 @@ export namespace Server {
           }),
         )
         .route("/global", GlobalRoutes())
+        .get(
+          "/auth/:providerID/accounts",
+          describeRoute({
+            summary: "List auth accounts",
+            description: "List authentication account metadata for a provider",
+            operationId: "auth.accounts",
+            responses: {
+              200: {
+                description: "Authentication accounts",
+                content: {
+                  "application/json": {
+                    schema: resolver(z.array(Auth.Summary)),
+                  },
+                },
+              },
+              ...errors(400),
+            },
+          }),
+          validator(
+            "param",
+            z.object({
+              providerID: z.string(),
+            }),
+          ),
+          async (c) => {
+            return c.json(await Auth.accounts(c.req.valid("param").providerID))
+          },
+        )
+        .patch(
+          "/auth/:providerID/accounts/:accountID",
+          describeRoute({
+            summary: "Select auth account",
+            description: "Select the active authentication account for a provider",
+            operationId: "auth.select",
+            responses: {
+              200: {
+                description: "Whether the authentication account was selected",
+                content: {
+                  "application/json": {
+                    schema: resolver(z.boolean()),
+                  },
+                },
+              },
+              ...errors(400, 404),
+            },
+          }),
+          validator(
+            "param",
+            z.object({
+              providerID: z.string(),
+              accountID: z.string(),
+            }),
+          ),
+          async (c) => {
+            const params = c.req.valid("param")
+            const selected = await Auth.select(params.providerID, params.accountID)
+            if (!selected) throw new NotFoundError({ message: "Authentication account not found" })
+            return c.json(true)
+          },
+        )
+        .delete(
+          "/auth/:providerID/accounts/:accountID",
+          describeRoute({
+            summary: "Remove auth account",
+            description: "Remove one authentication account for a provider",
+            operationId: "auth.removeAccount",
+            responses: {
+              200: {
+                description: "Whether the authentication account was removed",
+                content: {
+                  "application/json": {
+                    schema: resolver(z.boolean()),
+                  },
+                },
+              },
+              ...errors(400, 404),
+            },
+          }),
+          validator(
+            "param",
+            z.object({
+              providerID: z.string(),
+              accountID: z.string(),
+            }),
+          ),
+          async (c) => {
+            const params = c.req.valid("param")
+            const removed = await Auth.removeAccount(params.providerID, params.accountID)
+            if (!removed) throw new NotFoundError({ message: "Authentication account not found" })
+            return c.json(true)
+          },
+        )
         .put(
           "/auth/:providerID",
           describeRoute({
@@ -699,11 +791,7 @@ export namespace Server {
     }
 
     const shouldPublishMDNS =
-      opts.mdns &&
-      port &&
-      opts.hostname !== "127.0.0.1" &&
-      opts.hostname !== "localhost" &&
-      opts.hostname !== "::1"
+      opts.mdns && port && opts.hostname !== "127.0.0.1" && opts.hostname !== "localhost" && opts.hostname !== "::1"
     if (shouldPublishMDNS) {
       MDNS.publish(port, opts.mdnsDomain)
     } else if (opts.mdns) {

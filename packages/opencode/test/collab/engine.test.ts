@@ -32,6 +32,46 @@ function makeSpec(overrides?: Partial<AgentSpec>): AgentSpec {
   }
 }
 
+describe("Collab service tier", () => {
+  test("stores descendant selections on the root", async () => {
+    await Instance.provide({
+      directory: projectRoot,
+      fn: async () => {
+        const rootSession = await makeSession()
+        const rootId = Identifier.ascending("collab_agent")
+        CollabAgentNode.create({
+          id: rootId,
+          sessionId: rootSession.id,
+          parentAgentId: null,
+          name: "root",
+          projectId: Instance.project.id,
+          rootAgentId: rootId,
+          subagentType: "general",
+          spec: makeSpec(),
+        })
+
+        const childSession = await makeSession(rootSession.id)
+        CollabAgentNode.create({
+          id: Identifier.ascending("collab_agent"),
+          sessionId: childSession.id,
+          parentAgentId: rootId,
+          name: "child",
+          projectId: Instance.project.id,
+          rootAgentId: rootId,
+          subagentType: "general",
+          spec: makeSpec(),
+        })
+
+        Collab.serviceTier(childSession.id, "priority")
+        expect(CollabAgentNode.load(rootId).spec.serviceTier).toBe("priority")
+
+        Collab.serviceTier(rootSession.id, "default")
+        expect(CollabAgentNode.load(rootId).spec.serviceTier).toBe("default")
+      },
+    })
+  })
+})
+
 async function makeSession(parentID?: string) {
   return Session.create({ parentID, title: "collab-test " + Identifier.ascending("session") })
 }

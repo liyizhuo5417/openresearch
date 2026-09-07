@@ -11,6 +11,7 @@ import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 import type { Agent } from "../../src/agent/agent"
 import type { MessageV2 } from "../../src/session/message-v2"
+import { Auth } from "../../src/auth"
 
 describe("session.llm.hasToolCalls", () => {
   test("returns false for empty messages array", () => {
@@ -150,8 +151,9 @@ beforeEach(() => {
   state.queue.length = 0
 })
 
-afterAll(() => {
+afterAll(async () => {
   state.server?.stop()
+  await Auth.remove("openai")
 })
 
 function createChatStream(text: string) {
@@ -509,6 +511,10 @@ describe("session.llm.stream", () => {
       },
     ]
     const request = waitRequest("/responses", createEventResponse(responseChunks, true))
+    await Auth.set("openai", {
+      type: "api",
+      key: "test-openai-key",
+    })
 
     await using tmp = await tmpdir({
       init: async (dir) => {
@@ -541,6 +547,8 @@ describe("session.llm.stream", () => {
       directory: tmp.path,
       fn: async () => {
         const resolved = await Provider.getModel("openai", model.id)
+        resolved.api.url = `${server.url.origin}/v1`
+        resolved.capabilities.fast = true
         const sessionID = "session-test-2"
         const agent = {
           name: "test",
@@ -558,6 +566,7 @@ describe("session.llm.stream", () => {
           agent: agent.name,
           model: { providerID: "openai", modelID: resolved.id },
           variant: "high",
+          serviceTier: "priority",
         } satisfies MessageV2.User
 
         const stream = await LLM.stream({
@@ -581,10 +590,27 @@ describe("session.llm.stream", () => {
         expect(body.model).toBe(resolved.api.id)
         expect(body.stream).toBe(true)
         expect((body.reasoning as { effort?: string } | undefined)?.effort).toBe("high")
+        expect(body.service_tier).toBe("priority")
 
         const maxTokens = body.max_output_tokens as number | undefined
         const expectedMaxTokens = ProviderTransform.maxOutputTokens(resolved)
         expect(maxTokens).toBe(expectedMaxTokens)
+
+        const standardRequest = waitRequest("/responses", createEventResponse(responseChunks, true))
+        resolved.options.serviceTier = "priority"
+        const standard = await LLM.stream({
+          user: { ...user, id: "user-3", serviceTier: "default" },
+          sessionID,
+          model: resolved,
+          agent,
+          system: ["You are a helpful assistant."],
+          abort: new AbortController().signal,
+          messages: [{ role: "user", content: "Hello again" }],
+          tools: {},
+        })
+        for await (const _ of standard.fullStream) {
+        }
+        expect((await standardRequest).body.service_tier).toBeUndefined()
       },
     })
   })

@@ -15,7 +15,18 @@ export namespace ProviderAuth {
       map((x) => [x.auth!.provider, x.auth!] as const),
       fromEntries(),
     )
-    return { methods, pending: {} as Record<string, AuthOuathResult> }
+    return {
+      methods,
+      pending: {} as Record<
+        string,
+        {
+          providerID: string
+          method: number
+          result: AuthOuathResult
+        }
+      >,
+      latest: {} as Record<string, string>,
+    }
   })
 
   export const Method = z
@@ -45,6 +56,7 @@ export namespace ProviderAuth {
       url: z.string(),
       method: z.union([z.literal("auto"), z.literal("code")]),
       instructions: z.string(),
+      flow: z.string(),
     })
     .meta({
       ref: "ProviderAuthAuthorization",
@@ -61,11 +73,20 @@ export namespace ProviderAuth {
       const method = auth.methods[input.method]
       if (method.type === "oauth") {
         const result = await method.authorize()
-        await state().then((s) => (s.pending[input.providerID] = result))
+        const flow = crypto.randomUUID()
+        await state().then((s) => {
+          s.pending[flow] = {
+            providerID: input.providerID,
+            method: input.method,
+            result,
+          }
+          s.latest[input.providerID] = flow
+        })
         return {
           url: result.url,
           method: result.method,
           instructions: result.instructions,
+          flow,
         }
       }
     },
@@ -76,44 +97,59 @@ export namespace ProviderAuth {
       providerID: z.string(),
       method: z.number(),
       code: z.string().optional(),
+      flow: z.string().optional(),
     }),
     async (input) => {
-      const match = await state().then((s) => s.pending[input.providerID])
-      if (!match) throw new OauthMissing({ providerID: input.providerID })
-      let result
-
-      if (match.method === "code") {
-        if (!input.code) throw new OauthCodeMissing({ providerID: input.providerID })
-        result = await match.callback(input.code)
+      const s = await state()
+      const flow = input.flow ?? s.latest[input.providerID]
+      const pending = flow ? s.pending[flow] : undefined
+      if (!pending || pending.providerID !== input.providerID || pending.method !== input.method) {
+        throw new OauthMissing({ providerID: input.providerID })
       }
+      const match = pending.result
+      try {
+        let result
 
-      if (match.method === "auto") {
-        result = await match.callback()
-      }
-
-      if (result?.type === "success") {
-        if ("key" in result) {
-          await Auth.set(input.providerID, {
-            type: "api",
-            key: result.key,
-          })
+        if (match.method === "code") {
+          if (!input.code) throw new OauthCodeMissing({ providerID: input.providerID })
+          result = await match.callback(input.code)
         }
-        if ("refresh" in result) {
-          const info: Auth.Info = {
-            type: "oauth",
-            access: result.access,
-            refresh: result.refresh,
-            expires: result.expires,
-          }
-          if (result.accountId) {
-            info.accountId = result.accountId
-          }
-          await Auth.set(input.providerID, info)
-        }
-        return
-      }
 
-      throw new OauthCallbackFailed({})
+        if (match.method === "auto") {
+          result = await match.callback()
+        }
+
+        if (result?.type === "success") {
+          if ("key" in result) {
+            await Auth.set(input.providerID, {
+              type: "api",
+              key: result.key,
+            })
+          }
+          if ("refresh" in result) {
+            const info: Auth.Info = {
+              type: "oauth",
+              access: result.access,
+              refresh: result.refresh,
+              expires: result.expires,
+            }
+            if (result.accountId) {
+              info.accountId = result.accountId
+            }
+            if (result.email) {
+              info.email = result.email
+            }
+            if (input.providerID === "openai") await Auth.add(input.providerID, info)
+            if (input.providerID !== "openai") await Auth.set(input.providerID, info)
+          }
+          return
+        }
+
+        throw new OauthCallbackFailed({})
+      } finally {
+        if (flow) delete s.pending[flow]
+        if (s.latest[input.providerID] === flow) delete s.latest[input.providerID]
+      }
     },
   )
 

@@ -239,6 +239,19 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             )
           },
         },
+        fast: {
+          available() {
+            const m = current()
+            if (!m) return false
+            return m.capabilities.fast === true
+          },
+          enabled() {
+            return models.fast.get()
+          },
+          toggle() {
+            models.fast.set(!models.fast.get())
+          },
+        },
       }
     })()
 

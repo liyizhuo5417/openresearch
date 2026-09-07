@@ -249,6 +249,31 @@ describe("session.compaction.isOverflow", () => {
   })
 })
 
+describe("session.compaction.create", () => {
+  test("preserves variant and service tier on the compaction marker", async () => {
+    await using tmp = await tmpdir()
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+        await SessionCompaction.create({
+          sessionID: session.id,
+          agent: "build",
+          model: { providerID: "openai", modelID: "gpt-5.6-sol" },
+          variant: "high",
+          serviceTier: "priority",
+          auto: true,
+        })
+
+        const message = (await Session.messages({ sessionID: session.id }))[0].info
+        if (message.role !== "user") throw new Error("expected user message")
+        expect(message.variant).toBe("high")
+        expect(message.serviceTier).toBe("priority")
+      },
+    })
+  })
+})
+
 describe("util.token.estimate", () => {
   test("estimates tokens from text (4 chars per token)", () => {
     const text = "x".repeat(4000)

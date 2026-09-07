@@ -638,6 +638,7 @@ export namespace Provider {
       capabilities: z.object({
         temperature: z.boolean(),
         reasoning: z.boolean(),
+        fast: z.boolean().optional(),
         attachment: z.boolean(),
         toolcall: z.boolean(),
         input: z.object({
@@ -880,6 +881,7 @@ export namespace Provider {
           capabilities: {
             temperature: model.temperature ?? existingModel?.capabilities.temperature ?? false,
             reasoning: model.reasoning ?? existingModel?.capabilities.reasoning ?? false,
+            fast: existingModel?.capabilities.fast,
             attachment: model.attachment ?? existingModel?.capabilities.attachment ?? false,
             toolcall: model.tool_call ?? existingModel?.capabilities.toolcall ?? true,
             input: {

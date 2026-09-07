@@ -5,7 +5,7 @@ import { Config } from "../../config/config"
 import { Provider } from "../../provider/provider"
 import { ModelsDev } from "../../provider/models"
 import { ProviderAuth } from "../../provider/auth"
-import { mapValues } from "remeda"
+import { mapValues, omit } from "remeda"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
 
@@ -24,7 +24,7 @@ export const ProviderRoutes = lazy(() =>
               "application/json": {
                 schema: resolver(
                   z.object({
-                    all: ModelsDev.Provider.array(),
+                    all: Provider.Info.omit({ key: true, options: true }).array(),
                     default: z.record(z.string(), z.string()),
                     connected: z.array(z.string()),
                   }),
@@ -53,7 +53,7 @@ export const ProviderRoutes = lazy(() =>
           connected,
         )
         return c.json({
-          all: Object.values(providers),
+          all: Object.values(providers).map((provider) => omit(provider, ["key", "options"])),
           default: mapValues(providers, (item) => Provider.sort(Object.values(item.models))[0].id),
           connected: Object.keys(connected),
         })
@@ -149,15 +149,17 @@ export const ProviderRoutes = lazy(() =>
         z.object({
           method: z.number().meta({ description: "Auth method index" }),
           code: z.string().optional().meta({ description: "OAuth authorization code" }),
+          flow: z.string().optional().meta({ description: "OAuth authorization flow ID" }),
         }),
       ),
       async (c) => {
         const providerID = c.req.valid("param").providerID
-        const { method, code } = c.req.valid("json")
+        const { method, code, flow } = c.req.valid("json")
         await ProviderAuth.callback({
           providerID,
           method,
           code,
+          flow,
         })
         return c.json(true)
       },

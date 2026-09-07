@@ -19,7 +19,7 @@ import { usePlatform } from "@/context/platform"
 import { DialogSelectModel } from "./dialog-select-model"
 import { DialogSelectProvider } from "./dialog-select-provider"
 
-export function DialogConnectProvider(props: { provider: string }) {
+export function DialogConnectProvider(props: { provider: string; oauth?: boolean }) {
   const dialog = useDialog()
   const globalSync = useGlobalSync()
   const globalSDK = useGlobalSDK()
@@ -37,14 +37,17 @@ export function DialogConnectProvider(props: { provider: string }) {
   })
 
   const provider = createMemo(() => globalSync.data.provider.all.find((x) => x.id === props.provider)!)
-  const methods = createMemo(
-    () =>
+  const methods = createMemo(() =>
+    (
       globalSync.data.provider_auth[props.provider] ?? [
         {
           type: "api",
           label: language.t("provider.connect.method.apiKey"),
         },
-      ],
+      ]
+    )
+      .map((method, index) => ({ ...method, index }))
+      .filter((method) => !props.oauth || method.type === "oauth"),
   )
   const [store, setStore] = createStore({
     methodIndex: undefined as undefined | number,
@@ -94,7 +97,7 @@ export function DialogConnectProvider(props: { provider: string }) {
     )
   }
 
-  const method = createMemo(() => (store.methodIndex !== undefined ? methods().at(store.methodIndex!) : undefined))
+  const method = createMemo(() => methods().find((item) => item.index === store.methodIndex))
 
   const methodLabel = (value?: { type?: string; label?: string }) => {
     if (!value) return ""
@@ -120,14 +123,14 @@ export function DialogConnectProvider(props: { provider: string }) {
     return fallback
   }
 
-  async function selectMethod(index: number) {
+  async function selectMethod(position: number) {
     if (timer.current !== undefined) {
       clearTimeout(timer.current)
       timer.current = undefined
     }
 
-    const method = methods()[index]
-    dispatch({ type: "method.select", index })
+    const method = methods()[position]
+    dispatch({ type: "method.select", index: method.index })
 
     if (method.type === "oauth") {
       dispatch({ type: "auth.pending" })
@@ -136,7 +139,7 @@ export function DialogConnectProvider(props: { provider: string }) {
         .authorize(
           {
             providerID: props.provider,
-            method: index,
+            method: method.index,
           },
           { throwOnError: true },
         )
@@ -179,6 +182,18 @@ export function DialogConnectProvider(props: { provider: string }) {
   })
 
   async function complete() {
+    if (props.oauth) {
+      const accounts = await globalSDK.client.auth.accounts({ providerID: "openai" }, { throwOnError: true })
+      globalSync.set("provider_accounts", accounts.data ?? [])
+      dialog.close()
+      showToast({
+        variant: "success",
+        icon: "circle-check",
+        title: language.t("provider.connect.toast.connected.title", { provider: provider().name }),
+        description: language.t("provider.connect.toast.connected.description", { provider: provider().name }),
+      })
+      return
+    }
     await globalSDK.client.global.dispose()
     dialog.close()
     showToast({
@@ -190,16 +205,20 @@ export function DialogConnectProvider(props: { provider: string }) {
   }
 
   function goBack() {
-    if (methods().length === 1) {
-      dialog.show(() => <DialogSelectProvider />)
-      return
-    }
     if (store.authorization) {
       dispatch({ type: "method.reset" })
       return
     }
     if (store.methodIndex !== undefined) {
       dispatch({ type: "method.reset" })
+      return
+    }
+    if (props.oauth) {
+      dialog.close()
+      return
+    }
+    if (methods().length === 1) {
+      dialog.show(() => <DialogSelectProvider />)
       return
     }
     dialog.show(() => <DialogSelectProvider />)
@@ -338,6 +357,7 @@ export function DialogConnectProvider(props: { provider: string }) {
           providerID: props.provider,
           method: store.methodIndex,
           code,
+          flow: store.authorization?.flow,
         })
         .then((value) => (value.error ? { ok: false as const, error: value.error } : { ok: true as const }))
         .catch((error) => ({ ok: false as const, error }))
@@ -394,6 +414,7 @@ export function DialogConnectProvider(props: { provider: string }) {
           .callback({
             providerID: props.provider,
             method: store.methodIndex,
+            flow: store.authorization?.flow,
           })
           .then((value) => (value.error ? { ok: false as const, error: value.error } : { ok: true as const }))
           .catch((error) => ({ ok: false as const, error }))

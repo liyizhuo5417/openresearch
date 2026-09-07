@@ -106,6 +106,10 @@ export namespace LLM {
       mergeDeep(input.agent.options),
       mergeDeep(variant),
     )
+    if (input.model.capabilities.fast) {
+      if (input.user.serviceTier === "priority") options.serviceTier = "priority"
+      if (input.user.serviceTier === "default") delete options.serviceTier
+    }
     if (isCodex && !input.agent.prompt) {
       options.instructions = SystemPrompt.instructions()
     }

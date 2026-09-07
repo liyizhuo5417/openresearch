@@ -56,6 +56,7 @@ export const AgentSpecSchema = z
         modelID: z.string(),
       })
       .optional(),
+    serviceTier: z.enum(["default", "priority"]).optional(),
     policy: AgentPolicySchema.optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
   })

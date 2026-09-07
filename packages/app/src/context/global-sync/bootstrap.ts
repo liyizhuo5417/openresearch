@@ -1,4 +1,5 @@
 import type {
+  AuthAccount,
   Config,
   OpencodeClient,
   Path,
@@ -32,6 +33,7 @@ type GlobalStore = {
   }
   provider: ProviderListResponse
   provider_auth: ProviderAuthResponse
+  provider_accounts: AuthAccount[]
   config: Config
   reload: undefined | "pending" | "complete"
 }
@@ -88,6 +90,11 @@ export async function bootstrapGlobal(input: {
     retry(() =>
       input.globalSDK.provider.auth().then((x) => {
         input.setGlobalStore("provider_auth", x.data ?? {})
+      }),
+    ),
+    retry(() =>
+      input.globalSDK.auth.accounts({ providerID: "openai" }).then((x) => {
+        input.setGlobalStore("provider_accounts", x.data ?? [])
       }),
     ),
   ]

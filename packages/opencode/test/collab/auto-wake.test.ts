@@ -1048,6 +1048,181 @@ describe("CollabAutoWake confirms callback delivery", () => {
     })
   })
 
+  test("settles after a direct root callback releases its drive", async () => {
+    await Instance.provide({
+      directory: projectRoot,
+      fn: async () => {
+        CollabAutoWake.setEnabled(false)
+        CollabAutoWake.ensure()
+        const session = await Session.create({ title: "direct-root-settlement" })
+        const root = Identifier.ascending("collab_agent")
+        CollabAgentNode.create({
+          id: root,
+          sessionId: session.id,
+          parentAgentId: null,
+          name: "root",
+          projectId: Instance.project.id,
+          rootAgentId: root,
+          subagentType: "general",
+          spec: { initialPrompt: "root" },
+        })
+        CollabAgentNode.transition(root, "running", { phase: "main_loop" })
+        CollabMessage.post({
+          recipientAgentId: root,
+          senderAgentId: null,
+          kind: "session_remote_task_terminal",
+          payload: {
+            taskId: "direct-settlement-task",
+            expId: "exp",
+            kind: "experiment_run",
+            title: "task",
+            status: "finished",
+            logPath: null,
+            errorMessage: null,
+          },
+        })
+
+        let ended = 0
+        let driving = true
+        const off = Bus.subscribe(CollabEvent.RootDriveEnded, (event) => {
+          if (event.properties.rootAgentId !== root) return
+          ended++
+          driving = CollabAutoWake.isDriving(session.id)
+        })
+        CollabAutoWake.setDriveTurnOverrideForTesting(async (id) => {
+          expect(id).toBe(root)
+          CollabMessage.drain(id, "direct")
+        })
+        const abort = new AbortController()
+
+        try {
+          const pending = Collab.waitForRootSettled(session.id, root, abort.signal)
+          expect(await Promise.race([pending.then(() => true), Bun.sleep(10).then(() => false)])).toBe(false)
+
+          CollabAutoWake.setEnabled(true)
+          CollabAutoWake.wake(session.id)
+          await Promise.race([
+            pending,
+            Bun.sleep(2000).then(() => {
+              throw new Error("direct root settlement timed out")
+            }),
+          ])
+
+          expect(ended).toBe(1)
+          expect(driving).toBe(false)
+          expect(CollabMessage.hasOutstanding(root, "session_remote_task_terminal")).toBe(false)
+        } finally {
+          abort.abort()
+          off()
+          CollabAutoWake.setDriveTurnOverrideForTesting(undefined)
+          CollabAutoWake.setEnabled(true)
+        }
+      },
+    })
+  })
+
+  test("does not publish a root drive event for a direct child callback", async () => {
+    await Instance.provide({
+      directory: projectRoot,
+      fn: async () => {
+        CollabAutoWake.setEnabled(false)
+        CollabAutoWake.ensure()
+        const item = await tree("direct-child-event")
+        CollabAgentNode.transition(item.child.id, "running", { phase: "main_loop" })
+        let ended = 0
+        const off = Bus.subscribe(CollabEvent.RootDriveEnded, (event) => {
+          if (event.properties.sessionID === item.child.session_id) ended++
+        })
+        CollabAutoWake.setDriveTurnOverrideForTesting(async (id) => {
+          CollabMessage.drain(id, "direct")
+        })
+
+        try {
+          CollabMessage.post({
+            recipientAgentId: item.child.id,
+            senderAgentId: null,
+            kind: "session_remote_task_terminal",
+            payload: {
+              taskId: "direct-child-task",
+              expId: "exp",
+              kind: "experiment_run",
+              title: "task",
+              status: "finished",
+              logPath: null,
+              errorMessage: null,
+            },
+          })
+          CollabAutoWake.setEnabled(true)
+          CollabAutoWake.wake(item.child.session_id)
+
+          for (let i = 0; i < 200; i++) {
+            if (!CollabMessage.hasOutstanding(item.child.id, "session_remote_task_terminal")) break
+            await Bun.sleep(10)
+          }
+          expect(CollabMessage.hasOutstanding(item.child.id, "session_remote_task_terminal")).toBe(false)
+          expect(ended).toBe(0)
+        } finally {
+          off()
+          CollabAutoWake.setDriveTurnOverrideForTesting(undefined)
+          CollabAutoWake.setEnabled(true)
+        }
+      },
+    })
+  })
+
+  test("cancels root settlement when the signal is already aborted", async () => {
+    await Instance.provide({
+      directory: projectRoot,
+      fn: async () => {
+        CollabAutoWake.setEnabled(false)
+        CollabAutoWake.ensure()
+        const session = await Session.create({ title: "aborted-root-settlement" })
+        const root = Identifier.ascending("collab_agent")
+        CollabAgentNode.create({
+          id: root,
+          sessionId: session.id,
+          parentAgentId: null,
+          name: "root",
+          projectId: Instance.project.id,
+          rootAgentId: root,
+          subagentType: "general",
+          spec: { initialPrompt: "root" },
+        })
+        CollabAgentNode.transition(root, "running", { phase: "main_loop" })
+        CollabMessage.post({
+          recipientAgentId: root,
+          senderAgentId: null,
+          kind: "session_remote_task_terminal",
+          payload: {
+            taskId: "aborted-settlement-task",
+            expId: "exp",
+            kind: "experiment_run",
+            title: "task",
+            status: "finished",
+            logPath: null,
+            errorMessage: null,
+          },
+        })
+        const abort = new AbortController()
+        abort.abort()
+
+        try {
+          await Promise.race([
+            Collab.waitForRootSettled(session.id, root, abort.signal),
+            Bun.sleep(2000).then(() => {
+              throw new Error("aborted root settlement timed out")
+            }),
+          ])
+          expect(CollabMessage.list(root, { kind: "cancel" })).toHaveLength(1)
+        } finally {
+          CollabMessage.ack(CollabMessage.drain(root, "direct"))
+          CollabMessage.ack(CollabMessage.drain(root))
+          CollabAutoWake.setEnabled(true)
+        }
+      },
+    })
+  })
+
   test("drops a direct callback after its delivery refresh budget is exhausted", async () => {
     await Instance.provide({
       directory: projectRoot,

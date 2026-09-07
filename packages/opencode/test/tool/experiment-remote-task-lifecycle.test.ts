@@ -1070,6 +1070,7 @@ describe("tool.experiment-remote-task lifecycle", () => {
         const { Session } = await import("../../src/session")
         const { Collab, CollabAutoWake, CollabMessage } = await import("../../src/collab")
         CollabAutoWake.setEnabled(false)
+        const abort = new AbortController()
         try {
           await seed(tmp.path)
           const { ExperimentRemoteTaskGetTool, ExperimentRemoteTaskStartTool } = await import(
@@ -1117,11 +1118,13 @@ describe("tool.experiment-remote-task lifecycle", () => {
           expect(listeners).toHaveLength(1)
           expect(listeners[0].mode).toBe("direct")
           expect(Collab.workflowAsyncState(session.id).hasRemoteTaskListeners).toBe(false)
+          const node = Collab.getBySession(session.id)!
+          const pending = Collab.waitForRootSettled(session.id, node.id, abort.signal)
+          expect(await Promise.race([pending.then(() => true), Bun.sleep(10).then(() => false)])).toBe(false)
 
           ExperimentRemoteTask.update({ taskId: started.metadata.taskId, status: "finished", errorMessage: null })
 
           expect(Database.use((db) => db.select().from(RemoteTaskListenerTable).all())).toHaveLength(0)
-          const node = Collab.getBySession(session.id)!
           const messages = CollabMessage.list(node.id, { kind: "session_remote_task_terminal" })
           expect(messages).toHaveLength(1)
           expect(messages[0].status).toBe("pending")
@@ -1135,10 +1138,14 @@ describe("tool.experiment-remote-task lifecycle", () => {
             hasRemoteTaskListeners: false,
             hasPendingWakeMessages: false,
           })
+          expect(await Promise.race([pending.then(() => true), Bun.sleep(10).then(() => false)])).toBe(false)
 
           ExperimentRemoteTask.update({ taskId: started.metadata.taskId, status: "finished" })
           expect(CollabMessage.list(node.id, { kind: "session_remote_task_terminal" })).toHaveLength(1)
+          abort.abort()
+          await pending
         } finally {
+          abort.abort()
           CollabAutoWake.setEnabled(true)
         }
       },

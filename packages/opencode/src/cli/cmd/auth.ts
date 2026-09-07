@@ -95,13 +95,15 @@ async function handlePluginAuth(plugin: { auth: PluginAuth }, provider: string, 
         const saveProvider = result.provider ?? provider
         if ("refresh" in result) {
           const { type: _, provider: __, refresh, access, expires, ...extraFields } = result
-          await Auth.set(saveProvider, {
+          const info: Auth.Info = {
             type: "oauth",
             refresh,
             access,
             expires,
             ...extraFields,
-          })
+          }
+          if (saveProvider === "openai" && info.type === "oauth") await Auth.add(saveProvider, info)
+          if (saveProvider !== "openai") await Auth.set(saveProvider, info)
         }
         if ("key" in result) {
           await Auth.set(saveProvider, {
@@ -127,13 +129,15 @@ async function handlePluginAuth(plugin: { auth: PluginAuth }, provider: string, 
         const saveProvider = result.provider ?? provider
         if ("refresh" in result) {
           const { type: _, provider: __, refresh, access, expires, ...extraFields } = result
-          await Auth.set(saveProvider, {
+          const info: Auth.Info = {
             type: "oauth",
             refresh,
             access,
             expires,
             ...extraFields,
-          })
+          }
+          if (saveProvider === "openai" && info.type === "oauth") await Auth.add(saveProvider, info)
+          if (saveProvider !== "openai") await Auth.set(saveProvider, info)
         }
         if ("key" in result) {
           await Auth.set(saveProvider, {

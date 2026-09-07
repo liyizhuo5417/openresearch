@@ -143,6 +143,7 @@ export type UserMessage = {
     [key: string]: boolean
   }
   variant?: string
+  serviceTier?: "default" | "priority"
 }
 
 export type ProviderAuthError = {
@@ -245,6 +246,7 @@ export type AssistantMessage = {
   }
   structured?: unknown
   variant?: string
+  serviceTier?: "default" | "priority"
   finish?: string
 }
 
@@ -595,6 +597,7 @@ export type CollabAgentSpec = {
     providerID: string
     modelID: string
   }
+  serviceTier?: "default" | "priority"
   policy?: CollabAgentPolicy
   metadata?: {
     [key: string]: unknown
@@ -1832,12 +1835,26 @@ export type BadRequestError = {
   success: false
 }
 
+export type AuthAccount = {
+  id: string
+  email?: string
+  active: boolean
+}
+
+export type NotFoundError = {
+  name: "NotFoundError"
+  data: {
+    message: string
+  }
+}
+
 export type OAuth = {
   type: "oauth"
   refresh: string
   access: string
   expires: number
   accountId?: string
+  email?: string
   enterpriseUrl?: string
 }
 
@@ -1854,13 +1871,6 @@ export type WellKnownAuth = {
 
 export type Auth = OAuth | ApiAuth | WellKnownAuth
 
-export type NotFoundError = {
-  name: "NotFoundError"
-  data: {
-    message: string
-  }
-}
-
 export type Model = {
   id: string
   providerID: string
@@ -1874,6 +1884,7 @@ export type Model = {
   capabilities: {
     temperature: boolean
     reasoning: boolean
+    fast?: boolean
     attachment: boolean
     toolcall: boolean
     input: {
@@ -2173,6 +2184,7 @@ export type ProviderAuthAuthorization = {
   url: string
   method: "auto" | "code"
   instructions: string
+  flow: string
 }
 
 export type RemoteSession = {
@@ -2435,6 +2447,97 @@ export type GlobalDisposeResponses = {
 }
 
 export type GlobalDisposeResponse = GlobalDisposeResponses[keyof GlobalDisposeResponses]
+
+export type AuthAccountsData = {
+  body?: never
+  path: {
+    providerID: string
+  }
+  query?: never
+  url: "/auth/{providerID}/accounts"
+}
+
+export type AuthAccountsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AuthAccountsError = AuthAccountsErrors[keyof AuthAccountsErrors]
+
+export type AuthAccountsResponses = {
+  /**
+   * Authentication accounts
+   */
+  200: Array<AuthAccount>
+}
+
+export type AuthAccountsResponse = AuthAccountsResponses[keyof AuthAccountsResponses]
+
+export type AuthRemoveAccountData = {
+  body?: never
+  path: {
+    providerID: string
+    accountID: string
+  }
+  query?: never
+  url: "/auth/{providerID}/accounts/{accountID}"
+}
+
+export type AuthRemoveAccountErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type AuthRemoveAccountError = AuthRemoveAccountErrors[keyof AuthRemoveAccountErrors]
+
+export type AuthRemoveAccountResponses = {
+  /**
+   * Whether the authentication account was removed
+   */
+  200: boolean
+}
+
+export type AuthRemoveAccountResponse = AuthRemoveAccountResponses[keyof AuthRemoveAccountResponses]
+
+export type AuthSelectData = {
+  body?: never
+  path: {
+    providerID: string
+    accountID: string
+  }
+  query?: never
+  url: "/auth/{providerID}/accounts/{accountID}"
+}
+
+export type AuthSelectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type AuthSelectError = AuthSelectErrors[keyof AuthSelectErrors]
+
+export type AuthSelectResponses = {
+  /**
+   * Whether the authentication account was selected
+   */
+  200: boolean
+}
+
+export type AuthSelectResponse = AuthSelectResponses[keyof AuthSelectResponses]
 
 export type AuthRemoveData = {
   body?: never
@@ -3831,6 +3934,7 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    serviceTier?: "default" | "priority"
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput | CollabReturnPartInput>
   }
   path: {
@@ -4064,6 +4168,7 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    serviceTier?: "default" | "priority"
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput | CollabReturnPartInput>
   }
   path: {
@@ -4109,6 +4214,7 @@ export type SessionCommandData = {
     arguments: string
     command: string
     variant?: string
+    serviceTier?: "default" | "priority"
     parts?: Array<{
       id?: string
       type: "file"
@@ -7442,65 +7548,12 @@ export type ProviderListResponses = {
    */
   200: {
     all: Array<{
-      api?: string
-      name: string
-      env: Array<string>
       id: string
-      npm?: string
+      name: string
+      source: "env" | "config" | "custom" | "api"
+      env: Array<string>
       models: {
-        [key: string]: {
-          id: string
-          name: string
-          family?: string
-          release_date: string
-          attachment: boolean
-          reasoning: boolean
-          temperature: boolean
-          tool_call: boolean
-          interleaved?:
-            | true
-            | {
-                field: "reasoning_content" | "reasoning_details"
-              }
-          cost?: {
-            input: number
-            output: number
-            cache_read?: number
-            cache_write?: number
-            context_over_200k?: {
-              input: number
-              output: number
-              cache_read?: number
-              cache_write?: number
-            }
-          }
-          limit: {
-            context: number
-            input?: number
-            output: number
-          }
-          modalities?: {
-            input: Array<"text" | "audio" | "image" | "video" | "pdf">
-            output: Array<"text" | "audio" | "image" | "video" | "pdf">
-          }
-          experimental?: boolean
-          status?: "alpha" | "beta" | "deprecated"
-          options: {
-            [key: string]: unknown
-          }
-          headers?: {
-            [key: string]: string
-          }
-          provider?: {
-            npm?: string
-            api?: string
-          }
-          variants?: {
-            [key: string]: {
-              [key: string]: unknown
-            }
-          }
-        }
+        [key: string]: Model
       }
     }>
     default: {
@@ -7581,6 +7634,10 @@ export type ProviderOauthCallbackData = {
      * OAuth authorization code
      */
     code?: string
+    /**
+     * OAuth authorization flow ID
+     */
+    flow?: string
   }
   path: {
     /**

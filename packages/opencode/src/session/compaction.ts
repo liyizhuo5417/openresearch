@@ -141,6 +141,7 @@ export namespace SessionCompaction {
       mode: "compaction",
       agent: "compaction",
       variant: userMessage.variant,
+      serviceTier: userMessage.serviceTier,
       summary: true,
       path: {
         cwd: Instance.directory,
@@ -255,6 +256,7 @@ When constructing the summary, try to stick to this template:
           tools: original.tools,
           system: original.system,
           variant: original.variant,
+          serviceTier: original.serviceTier,
         })
         for (const part of replay.parts) {
           if (part.type === "compaction") continue
@@ -287,6 +289,8 @@ When constructing the summary, try to stick to this template:
           time: { created: Date.now() },
           agent: userMessage.agent,
           model: userMessage.model,
+          variant: userMessage.variant,
+          serviceTier: userMessage.serviceTier,
         })
         const text =
           (input.overflow
@@ -330,6 +334,8 @@ When constructing the summary, try to stick to this template:
         providerID: z.string(),
         modelID: z.string(),
       }),
+      variant: z.string().optional(),
+      serviceTier: z.enum(["default", "priority"]).optional(),
       auto: z.boolean(),
       overflow: z.boolean().optional(),
       origin: z.string().optional(),
@@ -341,6 +347,8 @@ When constructing the summary, try to stick to this template:
         model: input.model,
         sessionID: input.sessionID,
         agent: input.agent,
+        variant: input.variant,
+        serviceTier: input.serviceTier,
         time: {
           created: Date.now(),
         },
